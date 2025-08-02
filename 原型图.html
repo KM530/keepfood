@@ -1,0 +1,1585 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>食鲜管家 - 高保真原型</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', 'Noto Sans SC', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 40px;
+            padding: 40px 20px;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+        .phone-frame {
+            width: 375px;
+            height: 812px;
+            border: 12px solid #1a1a1a;
+            border-radius: 40px;
+            background-color: #ffffff;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            margin: 0 auto;
+        }
+        .phone-screen {
+            flex-grow: 1;
+            overflow-y: auto;
+            position: relative;
+            background: #ffffff;
+        }
+        .phone-screen::-webkit-scrollbar { display: none; }
+        .phone-screen { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        .phone-notch {
+            width: 150px;
+            height: 28px;
+            background: #1a1a1a;
+            border-bottom-left-radius: 15px;
+            border-bottom-right-radius: 15px;
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 100;
+        }
+        .status-bar {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 24px 0;
+            position: absolute;
+            width: 100%;
+            top: 0;
+            left: 0;
+            z-index: 50;
+            color: #1a1a1a;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        .bottom-tab {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            height: 84px;
+            border-top: 1px solid #e5e7eb;
+            background-color: #ffffff;
+            position: relative;
+            z-index: 50;
+            padding-bottom: 20px;
+        }
+        .tab-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            font-size: 10px;
+            color: #9ca3af;
+            cursor: pointer;
+        }
+        .tab-item.active { color: #2563eb; }
+        
+        .fab-container {
+            position: absolute;
+            width: 100%;
+            bottom: 60px;
+            left: 0;
+            display: flex;
+            justify-content: center;
+            z-index: 60;
+        }
+        .fab {
+            width: 64px;
+            height: 64px;
+            background: linear-gradient(135deg, #4f46e5, #2563eb);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 10px 20px rgba(37, 99, 235, 0.25);
+            color: white;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .fab:active { transform: scale(0.95); }
+        
+        .food-card {
+            background-color: white;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            break-inside: avoid;
+            margin-bottom: 16px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .food-card:hover { transform: translateY(-2px); }
+        
+        .long-press-menu {
+            position: absolute;
+            background: rgba(0,0,0,0.8);
+            inset: 0;
+            border-radius: 16px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+        }
+        .food-card:hover .long-press-menu {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        
+        .screen-title {
+            text-align: center;
+            font-size: 18px;
+            font-weight: 700;
+            color: #1f2937;
+            margin-bottom: 20px;
+            padding: 20px;
+            background: rgba(255,255,255,0.95);
+            backdrop-filter: blur(10px);
+        }
+        
+        .form-input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            font-size: 16px;
+            transition: border-color 0.2s;
+        }
+        .form-input:focus {
+            outline: none;
+            border-color: #2563eb;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #4f46e5, #2563eb);
+            color: white;
+            padding: 14px 24px;
+            border-radius: 12px;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .btn-primary:active { transform: scale(0.98); }
+        
+        .notification-card {
+            background: rgba(255,255,255,0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            padding: 20px;
+            margin: 10px 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        
+        <!-- 界面1: 首页 -->
+        <div class="phone-frame">
+            <div class="phone-notch"></div>
+            <div class="status-bar">
+                <div>10:02</div>
+                <div style="display: flex; gap: 6px;">
+                    <span>📶</span><span>📶</span><span>🔋</span>
+                </div>
+            </div>
+            <div class="screen-title" style="padding-top: 50px;">我的食物</div>
+            <div class="phone-screen px-4">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h2 style="font-size: 20px; font-weight: 700;">食物库存</h2>
+                    <button style="padding: 8px; border-radius: 8px; background: #f3f4f6;">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M3 4h18M7 12h10M10 20h4"/>
+                        </svg>
+                    </button>
+                </div>
+                
+                <div style="columns: 2; column-gap: 16px;">
+                    <!-- 食物卡片 -->
+                    <div class="food-card">
+                        <div style="position: relative;">
+                            <img src="https://images.unsplash.com/photo-1546470427-e26264be0b0d?w=300&h=200&fit=crop" style="width: 100%; height: 120px; object-fit: cover;">
+                            <div style="position: absolute; top: 8px; right: 8px; background: #ef4444; color: white; font-size: 10px; font-weight: 700; padding: 4px 8px; border-radius: 12px;">剩1天</div>
+                            <div class="long-press-menu">
+                                <button style="background: #3b82f6; color: white; padding: 8px 16px; border-radius: 20px; font-weight: 600; border: none;">消耗</button>
+                                <button style="background: #10b981; color: white; padding: 8px 16px; border-radius: 20px; font-weight: 600; border: none;">添加购物车</button>
+                            </div>
+                        </div>
+                        <div style="padding: 12px;">
+                            <p style="font-weight: 700; color: #1f2937;">西红柿</p>
+                            <p style="font-size: 12px; color: #6b7280;">数量: 3个</p>
+                        </div>
+                    </div>
+                    
+                    <div class="food-card">
+                        <img src="https://images.unsplash.com/photo-1563636619-e9143da7973b?w=300&h=200&fit=crop" style="width: 100%; height: 120px; object-fit: cover;">
+                        <div style="padding: 12px;">
+                            <p style="font-weight: 700; color: #1f2937;">牛奶</p>
+                            <p style="font-size: 12px; color: #6b7280;">数量: 1盒</p>
+                            <p style="font-size: 12px; color: #6b7280;">剩5天</p>
+                        </div>
+                    </div>
+                    
+                    <div class="food-card">
+                        <img src="https://images.unsplash.com/photo-1459411621453-7b03977f4bfc?w=300&h=200&fit=crop" style="width: 100%; height: 120px; object-fit: cover;">
+                        <div style="padding: 12px;">
+                            <p style="font-weight: 700; color: #1f2937;">西兰花</p>
+                            <p style="font-size: 12px; color: #6b7280;">数量: 1棵</p>
+                            <p style="font-size: 12px; color: #6b7280;">剩3天</p>
+                        </div>
+                    </div>
+                    
+                    <div class="food-card">
+                        <img src="https://images.unsplash.com/photo-1518569656558-1f25e69d93d7?w=300&h=200&fit=crop" style="width: 100%; height: 120px; object-fit: cover;">
+                        <div style="padding: 12px;">
+                            <p style="font-weight: 700; color: #1f2937;">鸡蛋</p>
+                            <p style="font-size: 12px; color: #6b7280;">数量: 12个</p>
+                            <p style="font-size: 12px; color: #6b7280;">剩15天</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="fab-container">
+                <div class="fab">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                    </svg>
+                </div>
+            </div>
+            
+            <div class="bottom-tab">
+                <div class="tab-item active">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                    </svg>
+                    <span>首页</span>
+                </div>
+                <div class="tab-item">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path>
+                    </svg>
+                    <span>菜谱</span>
+                </div>
+                <div class="tab-item" style="opacity: 0;">
+                    <span>新增</span>
+                </div>
+                <div class="tab-item">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="8" cy="21" r="1"></circle>
+                        <circle cx="19" cy="21" r="1"></circle>
+                        <path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"></path>
+                    </svg>
+                    <span>购物清单</span>
+                </div>
+                <div class="tab-item">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="12" cy="7" r="4"></circle>
+                    </svg>
+                    <span>我的</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 界面2: 菜谱 -->
+        <div class="phone-frame">
+            <div class="phone-notch"></div>
+            <div class="status-bar">
+                <div>10:02</div>
+                <div style="display: flex; gap: 6px;">
+                    <span>📶</span><span>📶</span><span>🔋</span>
+                </div>
+            </div>
+            <div class="screen-title" style="padding-top: 50px;">智能菜谱</div>
+            <div class="phone-screen">
+                <!-- 筛选区域 -->
+                <div style="padding: 20px; background: #f9fafb;">
+                    <div style="margin-bottom: 16px;">
+                        <label style="font-weight: 600; color: #374151; margin-bottom: 8px; display: block;">筛选分类</label>
+                        <div style="display: flex; gap: 8px; overflow-x: auto; padding-bottom: 8px;">
+                            <button style="padding: 8px 16px; background: #dbeafe; color: #1d4ed8; border-radius: 20px; font-size: 12px; font-weight: 600; white-space: nowrap; border: none;">蔬菜</button>
+                            <button style="padding: 8px 16px; background: #f3f4f6; color: #6b7280; border-radius: 20px; font-size: 12px; white-space: nowrap; border: none;">肉类</button>
+                            <button style="padding: 8px 16px; background: #f3f4f6; color: #6b7280; border-radius: 20px; font-size: 12px; white-space: nowrap; border: none;">乳制品</button>
+                            <button style="padding: 8px 16px; background: #f3f4f6; color: #6b7280; border-radius: 20px; font-size: 12px; white-space: nowrap; border: none;">水果</button>
+                        </div>
+                    </div>
+                    <div>
+                        <label style="font-weight: 600; color: #374151; margin-bottom: 8px; display: block;">临期时间</label>
+                        <div style="display: flex; gap: 8px; overflow-x: auto; padding-bottom: 8px;">
+                            <button style="padding: 8px 16px; background: #fecaca; color: #dc2626; border-radius: 20px; font-size: 12px; font-weight: 600; white-space: nowrap; border: none;">3天内</button>
+                            <button style="padding: 8px 16px; background: #f3f4f6; color: #6b7280; border-radius: 20px; font-size: 12px; white-space: nowrap; border: none;">7天内</button>
+                            <button style="padding: 8px 16px; background: #f3f4f6; color: #6b7280; border-radius: 20px; font-size: 12px; white-space: nowrap; border: none;">15天内</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 食材选择区域 -->
+                <div style="padding: 20px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                        <h3 style="font-size: 18px; font-weight: 700; color: #1f2937;">选择食材 (2)</h3>
+                        <button style="color: #2563eb; font-weight: 600; font-size: 14px; background: none; border: none;">全选</button>
+                    </div>
+                    <div style="display: flex; gap: 16px; overflow-x: auto; padding-bottom: 16px; height: 160px;">
+                        <div style="flex-shrink: 0; width: 100px; text-align: center; position: relative;">
+                            <div style="position: absolute; top: 4px; right: 4px; width: 20px; height: 20px; background: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid #2563eb;">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="3">
+                                    <polyline points="20 6 9 17 4 12"></polyline>
+                                </svg>
+                            </div>
+                            <img src="https://images.unsplash.com/photo-1546470427-e26264be0b0d?w=150&h=150&fit=crop" style="width: 100px; height: 100px; object-fit: cover; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+                            <p style="margin-top: 8px; font-weight: 600; font-size: 12px; color: #1f2937;">西红柿</p>
+                            <p style="font-size: 10px; color: #ef4444; font-weight: 600;">剩1天</p>
+                        </div>
+                        <div style="flex-shrink: 0; width: 100px; text-align: center; position: relative;">
+                            <div style="position: absolute; top: 4px; right: 4px; width: 20px; height: 20px; background: white; border-radius: 50%; border: 1px solid #d1d5db;"></div>
+                            <img src="https://images.unsplash.com/photo-1588166524941-3bf61a9c41db?w=150&h=150&fit=crop" style="width: 100px; height: 100px; object-fit: cover; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+                            <p style="margin-top: 8px; font-weight: 600; font-size: 12px; color: #1f2937;">鸡胸肉</p>
+                            <p style="font-size: 10px; color: #ef4444; font-weight: 600;">剩2天</p>
+                        </div>
+                        <div style="flex-shrink: 0; width: 100px; text-align: center; position: relative;">
+                            <div style="position: absolute; top: 4px; right: 4px; width: 20px; height: 20px; background: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid #2563eb;">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="3">
+                                    <polyline points="20 6 9 17 4 12"></polyline>
+                                </svg>
+                            </div>
+                            <img src="https://images.unsplash.com/photo-1459411621453-7b03977f4bfc?w=150&h=150&fit=crop" style="width: 100px; height: 100px; object-fit: cover; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+                            <p style="margin-top: 8px; font-weight: 600; font-size: 12px; color: #1f2937;">西兰花</p>
+                            <p style="font-size: 10px; color: #ef4444; font-weight: 600;">剩3天</p>
+                        </div>
+                    </div>
+                    
+                    <button class="btn-primary" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 20px;">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"></path>
+                        </svg>
+                        AI生成菜谱
+                    </button>
+                    
+                    <!-- AI菜谱结果 -->
+                    <h3 style="font-size: 18px; font-weight: 700; color: #1f2937; margin-bottom: 16px;">为你推荐 (2)</h3>
+                    <div style="space-y: 16px;">
+                        <div style="background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1); margin-bottom: 16px;">
+                            <div style="position: relative;">
+                                <img src="https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=400&h=200&fit=crop" style="width: 100%; height: 160px; object-fit: cover;">
+                                <div style="position: absolute; inset: 0; background: rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center;">
+                                    <svg width="48" height="48" viewBox="0 0 24 24" fill="white">
+                                        <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                                    </svg>
+                                </div>
+                            </div>
+                            <div style="padding: 16px;">
+                                <h4 style="font-weight: 700; font-size: 16px; color: #1f2937;">西红柿炒西兰花</h4>
+                                <p style="font-size: 14px; color: #6b7280; margin-top: 4px;">健康美味，15分钟搞定！</p>
+                                <p style="font-size: 12px; color: #9ca3af; margin-top: 8px;">主要食材: 西红柿, 西兰花</p>
+                            </div>
+                        </div>
+                        
+                        <div style="background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+                            <div style="position: relative;">
+                                <img src="https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=400&h=200&fit=crop" style="width: 100%; height: 160px; object-fit: cover;">
+                                <div style="position: absolute; inset: 0; background: rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center;">
+                                    <svg width="48" height="48" viewBox="0 0 24 24" fill="white">
+                                        <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                                    </svg>
+                                </div>
+                            </div>
+                            <div style="padding: 16px;">
+                                <h4 style="font-weight: 700; font-size: 16px; color: #1f2937;">番茄西兰花汤</h4>
+                                <p style="font-size: 14px; color: #6b7280; margin-top: 4px;">清爽营养，低卡健康</p>
+                                <p style="font-size: 12px; color: #9ca3af; margin-top: 8px;">主要食材: 西红柿, 西兰花</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bottom-tab">
+                <div class="tab-item">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                    </svg>
+                    <span>首页</span>
+                </div>
+                <div class="tab-item active">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path>
+                    </svg>
+                    <span>菜谱</span>
+                </div>
+                <div class="tab-item" style="opacity: 0;">
+                    <span>新增</span>
+                </div>
+                <div class="tab-item">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="8" cy="21" r="1"></circle>
+                        <circle cx="19" cy="21" r="1"></circle>
+                        <path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"></path>
+                    </svg>
+                    <span>购物清单</span>
+                </div>
+                <div class="tab-item">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="12" cy="7" r="4"></circle>
+                    </svg>
+                    <span>我的</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 界面3: 购物清单 -->
+        <div class="phone-frame">
+            <div class="phone-notch"></div>
+            <div class="status-bar">
+                <div>10:02</div>
+                <div style="display: flex; gap: 6px;">
+                    <span>📶</span><span>📶</span><span>🔋</span>
+                </div>
+            </div>
+            <div class="screen-title" style="padding-top: 50px;">购物清单</div>
+            <div class="phone-screen">
+                <div style="padding: 20px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                        <h2 style="font-size: 20px; font-weight: 700; color: #1f2937;">待购买 (4)</h2>
+                        <div style="display: flex; gap: 8px;">
+                            <button style="padding: 8px 12px; background: #dbeafe; color: #1d4ed8; border-radius: 8px; font-size: 12px; font-weight: 600; border: none;">全选</button>
+                            <button style="padding: 8px 12px; background: #fecaca; color: #dc2626; border-radius: 8px; font-size: 12px; font-weight: 600; border: none;">删除</button>
+                        </div>
+                    </div>
+                    
+                    <div style="space-y: 12px;">
+                        <div style="display: flex; align-items: center; background: white; padding: 16px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                            <input type="checkbox" style="margin-right: 12px; width: 18px; height: 18px;">
+                            <img src="https://images.unsplash.com/photo-1546470427-e26264be0b0d?w=60&h=60&fit=crop" style="width: 50px; height: 50px; object-fit: cover; border-radius: 8px; margin-right: 12px;">
+                            <div style="flex-grow: 1;">
+                                <p style="font-weight: 600; color: #1f2937;">西红柿</p>
+                                <p style="font-size: 12px; color: #6b7280;">需要: 5个</p>
+                            </div>
+                            <button style="padding: 6px; background: #f3f4f6; border-radius: 6px; border: none;">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M12 20h9"></path>
+                                    <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+                                </svg>
+                            </button>
+                        </div>
+                        
+                        <div style="display: flex; align-items: center; background: white; padding: 16px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                            <input type="checkbox" checked style="margin-right: 12px; width: 18px; height: 18px;">
+                            <img src="https://images.unsplash.com/photo-1563636619-e9143da7973b?w=60&h=60&fit=crop" style="width: 50px; height: 50px; object-fit: cover; border-radius: 8px; margin-right: 12px;">
+                            <div style="flex-grow: 1;">
+                                <p style="font-weight: 600; color: #1f2937; text-decoration: line-through;">牛奶</p>
+                                <p style="font-size: 12px; color: #6b7280;">需要: 2盒</p>
+                            </div>
+                            <button style="padding: 6px; background: #f3f4f6; border-radius: 6px; border: none;">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M12 20h9"></path>
+                                    <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+                                </svg>
+                            </button>
+                        </div>
+                        
+                        <div style="display: flex; align-items: center; background: white; padding: 16px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                            <input type="checkbox" style="margin-right: 12px; width: 18px; height: 18px;">
+                            <img src="https://images.unsplash.com/photo-1518569656558-1f25e69d93d7?w=60&h=60&fit=crop" style="width: 50px; height: 50px; object-fit: cover; border-radius: 8px; margin-right: 12px;">
+                            <div style="flex-grow: 1;">
+                                <p style="font-weight: 600; color: #1f2937;">鸡蛋</p>
+                                <p style="font-size: 12px; color: #6b7280;">需要: 1盒</p>
+                            </div>
+                            <button style="padding: 6px; background: #f3f4f6; border-radius: 6px; border: none;">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M12 20h9"></path>
+                                    <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+                                </svg>
+                            </button>
+                        </div>
+                        
+                        <div style="display: flex; align-items: center; background: white; padding: 16px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                            <input type="checkbox" style="margin-right: 12px; width: 18px; height: 18px;">
+                            <img src="https://images.unsplash.com/photo-1588166524941-3bf61a9c41db?w=60&h=60&fit=crop" style="width: 50px; height: 50px; object-fit: cover; border-radius: 8px; margin-right: 12px;">
+                            <div style="flex-grow: 1;">
+                                <p style="font-weight: 600; color: #1f2937;">鸡胸肉</p>
+                                <p style="font-size: 12px; color: #6b7280;">需要: 500g</p>
+                            </div>
+                            <button style="padding: 6px; background: #f3f4f6; border-radius: 6px; border: none;">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M12 20h9"></path>
+                                    <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <button class="btn-primary" style="width: 100%; margin-top: 24px; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="12" y1="5" x2="12" y2="19"></line>
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                        </svg>
+                        添加新商品
+                    </button>
+                </div>
+            </div>
+            
+            <div class="bottom-tab">
+                <div class="tab-item">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                    </svg>
+                    <span>首页</span>
+                </div>
+                <div class="tab-item">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path>
+                    </svg>
+                    <span>菜谱</span>
+                </div>
+                <div class="tab-item" style="opacity: 0;">
+                    <span>新增</span>
+                </div>
+                <div class="tab-item active">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="8" cy="21" r="1"></circle>
+                        <circle cx="19" cy="21" r="1"></circle>
+                        <path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"></path>
+                    </svg>
+                    <span>购物清单</span>
+                </div>
+                <div class="tab-item">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="12" cy="7" r="4"></circle>
+                    </svg>
+                    <span>我的</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 界面4: 我的 -->
+        <div class="phone-frame">
+            <div class="phone-notch"></div>
+            <div class="status-bar">
+                <div>10:02</div>
+                <div style="display: flex; gap: 6px;">
+                    <span>📶</span><span>📶</span><span>🔋</span>
+                </div>
+            </div>
+            <div class="screen-title" style="padding-top: 50px;">我的</div>
+            <div class="phone-screen">
+                <!-- 用户信息区域 -->
+                <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px 20px; color: white;">
+                    <div style="display: flex; align-items: center; gap: 16px;">
+                        <div style="width: 80px; height: 80px; border-radius: 50%; background: white; display: flex; align-items: center; justify-content: center; font-size: 32px;">👤</div>
+                        <div>
+                            <h3 style="font-size: 20px; font-weight: 700; margin-bottom: 4px;">美食达人</h3>
+                            <p style="opacity: 0.9; font-size: 14px;">已管理食物 127 天</p>
+                            <button style="background: rgba(255,255,255,0.2); color: white; padding: 6px 12px; border-radius: 16px; font-size: 12px; border: none; margin-top: 8px;">编辑资料</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 统计数据 -->
+                <div style="display: flex; background: white; margin: -20px 20px 20px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+                    <div style="flex: 1; text-align: center; padding: 20px;">
+                        <p style="font-size: 24px; font-weight: 700; color: #2563eb;">23</p>
+                        <p style="font-size: 12px; color: #6b7280;">当前食物</p>
+                    </div>
+                    <div style="flex: 1; text-align: center; padding: 20px; border-left: 1px solid #e5e7eb;">
+                        <p style="font-size: 24px; font-weight: 700; color: #10b981;">156</p>
+                        <p style="font-size: 12px; color: #6b7280;">已消耗</p>
+                    </div>
+                    <div style="flex: 1; text-align: center; padding: 20px; border-left: 1px solid #e5e7eb;">
+                        <p style="font-size: 24px; font-weight: 700; color: #f59e0b;">12</p>
+                        <p style="font-size: 12px; color: #6b7280;">即将过期</p>
+                    </div>
+                </div>
+                
+                <!-- 功能菜单 -->
+                <div style="padding: 0 20px;">
+                    <div style="background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 16px;">
+                        <div style="display: flex; align-items: center; padding: 16px; border-bottom: 1px solid #f3f4f6;">
+                            <div style="width: 40px; height: 40px; background: #dbeafe; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-right: 12px;">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2">
+                                    <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path>
+                                </svg>
+                            </div>
+                            <div style="flex-grow: 1;">
+                                <p style="font-weight: 600; color: #1f2937;">分类管理</p>
+                                <p style="font-size: 12px; color: #6b7280;">管理食物分类</p>
+                            </div>
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2">
+                                <polyline points="9 18 15 12 9 6"></polyline>
+                            </svg>
+                        </div>
+                        
+                        <div style="display: flex; align-items: center; padding: 16px; border-bottom: 1px solid #f3f4f6;">
+                            <div style="width: 40px; height: 40px; background: #dcfce7; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-right: 12px;">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2">
+                                    <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path>
+                                </svg>
+                            </div>
+                            <div style="flex-grow: 1;">
+                                <p style="font-weight: 600; color: #1f2937;">消费记录</p>
+                                <p style="font-size: 12px; color: #6b7280;">查看历史消费</p>
+                            </div>
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2">
+                                <polyline points="9 18 15 12 9 6"></polyline>
+                            </svg>
+                        </div>
+                        
+                        <div style="display: flex; align-items: center; padding: 16px;">
+                            <div style="width: 40px; height: 40px; background: #fef3c7; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-right: 12px;">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2">
+                                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                                </svg>
+                            </div>
+                            <div style="flex-grow: 1;">
+                                <p style="font-weight: 600; color: #1f2937;">通知设置</p>
+                                <p style="font-size: 12px; color: #6b7280;">过期提醒设置</p>
+                            </div>
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2">
+                                <polyline points="9 18 15 12 9 6"></polyline>
+                            </svg>
+                        </div>
+                    </div>
+                    
+                    <div style="background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                        <div style="display: flex; align-items: center; padding: 16px; border-bottom: 1px solid #f3f4f6;">
+                            <div style="width: 40px; height: 40px; background: #f3e8ff; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-right: 12px;">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#9333ea" stroke-width="2">
+                                    <circle cx="12" cy="12" r="3"></circle>
+                                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                                </svg>
+                            </div>
+                            <div style="flex-grow: 1;">
+                                <p style="font-weight: 600; color: #1f2937;">设置</p>
+                                <p style="font-size: 12px; color: #6b7280;">应用设置</p>
+                            </div>
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2">
+                                <polyline points="9 18 15 12 9 6"></polyline>
+                            </svg>
+                        </div>
+                        
+                        <div style="display: flex; align-items: center; padding: 16px; border-bottom: 1px solid #f3f4f6;">
+                            <div style="width: 40px; height: 40px; background: #fecaca; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-right: 12px;">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+                                    <path d="M12 17h.01"></path>
+                                </svg>
+                            </div>
+                            <div style="flex-grow: 1;">
+                                <p style="font-weight: 600; color: #1f2937;">帮助与反馈</p>
+                                <p style="font-size: 12px; color: #6b7280;">使用帮助</p>
+                            </div>
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2">
+                                <polyline points="9 18 15 12 9 6"></polyline>
+                            </svg>
+                        </div>
+                        
+                        <div style="display: flex; align-items: center; padding: 16px;">
+                            <div style="width: 40px; height: 40px; background: #e5e7eb; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-right: 12px;">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <path d="M12 6v6l4 2"></path>
+                                </svg>
+                            </div>
+                            <div style="flex-grow: 1;">
+                                <p style="font-weight: 600; color: #1f2937;">关于我们</p>
+                                <p style="font-size: 12px; color: #6b7280;">版本 1.0.0</p>
+                            </div>
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2">
+                                <polyline points="9 18 15 12 9 6"></polyline>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bottom-tab">
+                <div class="tab-item">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                    </svg>
+                    <span>首页</span>
+                </div>
+                <div class="tab-item">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path>
+                    </svg>
+                    <span>菜谱</span>
+                </div>
+                <div class="tab-item" style="opacity: 0;">
+                    <span>新增</span>
+                </div>
+                <div class="tab-item">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="8" cy="21" r="1"></circle>
+                        <circle cx="19" cy="21" r="1"></circle>
+                        <path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"></path>
+                    </svg>
+                    <span>购物清单</span>
+                </div>
+                <div class="tab-item active">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="12" cy="7" r="4"></circle>
+                    </svg>
+                    <span>我的</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 界面5: 新增食物 -->
+        <div class="phone-frame">
+            <div class="phone-notch"></div>
+            <div class="status-bar">
+                <div>10:02</div>
+                <div style="display: flex; gap: 6px;">
+                    <span>📶</span><span>📶</span><span>🔋</span>
+                </div>
+            </div>
+            <div style="display: flex; align-items: center; justify-content: space-between; padding: 50px 20px 20px;">
+                <button style="background: none; border: none; padding: 8px;">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="15 18 9 12 15 6"></polyline>
+                    </svg>
+                </button>
+                <h1 style="font-size: 18px; font-weight: 700; color: #1f2937;">新增食物</h1>
+                <button class="btn-primary" style="padding: 8px 16px; font-size: 14px;">保存</button>
+            </div>
+            
+            <div class="phone-screen">
+                <div style="padding: 0 20px;">
+                    <!-- 食物图片上传 -->
+                    <div style="margin-bottom: 24px;">
+                        <label style="font-weight: 600; color: #374151; margin-bottom: 8px; display: block;">食物图片</label>
+                        <div style="border: 2px dashed #d1d5db; border-radius: 12px; padding: 40px; text-align: center; background: #f9fafb;">
+                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="1" style="margin: 0 auto 12px;">
+                                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                                <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                                <polyline points="21 15 16 10 5 21"></polyline>
+                            </svg>
+                            <p style="color: #6b7280; font-size: 14px; margin-bottom: 8px;">点击上传或拍照</p>
+                            <div style="display: flex; gap: 8px; justify-content: center;">
+                                <button style="background: #dbeafe; color: #1d4ed8; padding: 6px 12px; border-radius: 8px; font-size: 12px; border: none;">拍照</button>
+                                <button style="background: #dcfce7; color: #16a34a; padding: 6px 12px; border-radius: 8px; font-size: 12px; border: none;">相册</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 基本信息 -->
+                    <div style="space-y: 16px;">
+                        <div>
+                            <label style="font-weight: 600; color: #374151; margin-bottom: 8px; display: block;">食物名称</label>
+                            <input class="form-input" type="text" placeholder="请输入食物名称">
+                        </div>
+                        
+                        <div style="display: flex; gap: 12px;">
+                            <div style="flex: 1;">
+                                <label style="font-weight: 600; color: #374151; margin-bottom: 8px; display: block;">数量</label>
+                                <input class="form-input" type="text" placeholder="如: 3个">
+                            </div>
+                            <div style="flex: 1;">
+                                <label style="font-weight: 600; color: #374151; margin-bottom: 8px; display: block;">分类</label>
+                                <select class="form-input">
+                                    <option>蔬菜</option>
+                                    <option>肉类</option>
+                                    <option>乳制品</option>
+                                    <option>水果</option>
+                                    <option>主食</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <label style="font-weight: 600; color: #374151; margin-bottom: 8px; display: block;">存放位置</label>
+                            <select class="form-input">
+                                <option>冰箱冷藏</option>
+                                <option>冰箱冷冻</option>
+                                <option>常温储存</option>
+                                <option>阴凉干燥处</option>
+                            </select>
+                        </div>
+                        
+                        <!-- AI识别区域 -->
+                        <div style="background: #f0f9ff; border: 1px solid #0ea5e9; border-radius: 12px; padding: 16px; margin: 16px 0;">
+                            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0ea5e9" stroke-width="2">
+                                    <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"></path>
+                                </svg>
+                                <span style="font-weight: 600; color: #0369a1;">AI智能识别</span>
+                            </div>
+                            <p style="font-size: 14px; color: #0369a1; margin-bottom: 12px;">拍照识别包装信息，自动填写生产日期、保质期等</p>
+                            <button style="background: #0ea5e9; color: white; padding: 8px 16px; border-radius: 8px; font-size: 14px; border: none; width: 100%;">📷 拍照识别包装</button>
+                        </div>
+                        
+                        <div style="display: flex; gap: 12px;">
+                            <div style="flex: 1;">
+                                <label style="font-weight: 600; color: #374151; margin-bottom: 8px; display: block;">生产日期</label>
+                                <input class="form-input" type="date">
+                            </div>
+                            <div style="flex: 1;">
+                                <label style="font-weight: 600; color: #374151; margin-bottom: 8px; display: block;">保质期(天)</label>
+                                <input class="form-input" type="number" placeholder="30">
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <label style="font-weight: 600; color: #374151; margin-bottom: 8px; display: block;">配料成分</label>
+                            <textarea class="form-input" rows="3" placeholder="AI识别后自动填写，也可手动输入"></textarea>
+                            <div style="margin-top: 8px;">
+                                <span style="background: #fecaca; color: #dc2626; padding: 2px 6px; border-radius: 4px; font-size: 10px; margin-right: 4px;">⚠️ 防腐剂</span>
+                                <span style="background: #fed7aa; color: #ea580c; padding: 2px 6px; border-radius: 4px; font-size: 10px;">⚠️ 人工色素</span>
+                            </div>
+                        </div>
+                        
+                        <!-- AI营养分析 -->
+                        <div style="background: #f0fdf4; border: 1px solid #22c55e; border-radius: 12px; padding: 16px;">
+                            <h4 style="font-weight: 600; color: #16a34a; margin-bottom: 8px;">🤖 AI营养分析</h4>
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                                <span style="color: #16a34a;">营养价值(卡路里):</span>
+                                <span style="font-weight: 600; color: #16a34a;">85 kcal</span>
+                            </div>
+                            <div style="color: #16a34a; font-size: 14px;">
+                                <p>💪 热量抵消建议:</p>
+                                <p>• 快走 18分钟</p>
+                                <p>• 游泳 8分钟</p>
+                                <p>• 跑步 6分钟</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 界面6: 查看食物详情 -->
+        <div class="phone-frame">
+            <div class="phone-notch"></div>
+            <div class="status-bar">
+                <div>10:02</div>
+                <div style="display: flex; gap: 6px;">
+                    <span>📶</span><span>📶</span><span>🔋</span>
+                </div>
+            </div>
+            <div style="display: flex; align-items: center; justify-content: space-between; padding: 50px 20px 20px;">
+                <button style="background: none; border: none; padding: 8px;">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="15 18 9 12 15 6"></polyline>
+                    </svg>
+                </button>
+                <h1 style="font-size: 18px; font-weight: 700; color: #1f2937;">食物详情</h1>
+                <button style="background: #dbeafe; color: #1d4ed8; padding: 8px 16px; border-radius: 8px; font-size: 14px; border: none;">编辑</button>
+            </div>
+            
+            <div class="phone-screen">
+                <div style="padding: 0 20px;">
+                    <!-- 食物图片 -->
+                    <div style="text-align: center; margin-bottom: 24px;">
+                        <img src="https://images.unsplash.com/photo-1546470427-e26264be0b0d?w=300&h=300&fit=crop" style="width: 200px; height: 200px; object-fit: cover; border-radius: 16px; box-shadow: 0 8px 24px rgba(0,0,0,0.15);">
+                        <div style="margin-top: 12px;">
+                            <h2 style="font-size: 24px; font-weight: 700; color: #1f2937; margin-bottom: 4px;">西红柿</h2>
+                            <div style="background: #fecaca; color: #dc2626; padding: 6px 12px; border-radius: 20px; display: inline-block; font-weight: 600;">⏰ 剩余1天</div>
+                        </div>
+                    </div>
+                    
+                    <!-- 详细信息 -->
+                    <div style="space-y: 16px;">
+                        <div style="background: white; border-radius: 12px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                            <h3 style="font-weight: 600; color: #1f2937; margin-bottom: 12px;">基本信息</h3>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; font-size: 14px;">
+                                <div>
+                                    <span style="color: #6b7280;">数量:</span>
+                                    <span style="font-weight: 600; color: #1f2937; margin-left: 8px;">3个</span>
+                                </div>
+                                <div>
+                                    <span style="color: #6b7280;">分类:</span>
+                                    <span style="font-weight: 600; color: #1f2937; margin-left: 8px;">蔬菜</span>
+                                </div>
+                                <div>
+                                    <span style="color: #6b7280;">存放位置:</span>
+                                    <span style="font-weight: 600; color: #1f2937; margin-left: 8px;">冰箱冷藏</span>
+                                </div>
+                                <div>
+                                    <span style="color: #6b7280;">购买日期:</span>
+                                    <span style="font-weight: 600; color: #1f2937; margin-left: 8px;">2024-01-15</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div style="background: white; border-radius: 12px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                            <h3 style="font-weight: 600; color: #1f2937; margin-bottom: 12px;">保质期信息</h3>
+                            <div style="space-y: 8px; font-size: 14px;">
+                                <div style="display: flex; justify-content: space-between;">
+                                    <span style="color: #6b7280;">生产日期:</span>
+                                    <span style="font-weight: 600; color: #1f2937;">2024-01-10</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between;">
+                                    <span style="color: #6b7280;">保质期:</span>
+                                    <span style="font-weight: 600; color: #1f2937;">7天</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between;">
+                                    <span style="color: #6b7280;">过期时间:</span>
+                                    <span style="font-weight: 600; color: #dc2626;">2024-01-17</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div style="background: white; border-radius: 12px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                            <h3 style="font-weight: 600; color: #1f2937; margin-bottom: 12px;">营养信息</h3>
+                            <div style="background: #f0fdf4; border-radius: 8px; padding: 12px;">
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                                    <span style="color: #16a34a;">热量:</span>
+                                    <span style="font-weight: 600; color: #16a34a;">85 kcal</span>
+                                </div>
+                                <div style="color: #16a34a; font-size: 12px;">
+                                    <p>💪 运动消耗建议: 快走18分钟 / 游泳8分钟</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div style="background: white; border-radius: 12px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                            <h3 style="font-weight: 600; color: #1f2937; margin-bottom: 12px;">配料成分</h3>
+                            <p style="color: #6b7280; font-size: 14px; line-height: 1.5;">新鲜西红柿，富含维生素C、番茄红素等营养成分。无添加剂，天然健康。</p>
+                        </div>
+                        
+                        <!-- 操作按钮 -->
+                        <div style="display: flex; gap: 12px; margin-top: 24px;">
+                            <button style="flex: 1; background: #3b82f6; color: white; padding: 14px; border-radius: 12px; font-weight: 600; border: none;">消耗食物</button>
+                            <button style="flex: 1; background: #10b981; color: white; padding: 14px; border-radius: 12px; font-weight: 600; border: none;">添加购物车</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 界面7: 编辑食物详情 -->
+        <div class="phone-frame">
+            <div class="phone-notch"></div>
+            <div class="status-bar">
+                <div>10:02</div>
+                <div style="display: flex; gap: 6px;">
+                    <span>📶</span><span>📶</span><span>🔋</span>
+                </div>
+            </div>
+            <div style="display: flex; align-items: center; justify-content: space-between; padding: 50px 20px 20px;">
+                <button style="background: none; border: none; padding: 8px;">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="15 18 9 12 15 6"></polyline>
+                    </svg>
+                </button>
+                <h1 style="font-size: 18px; font-weight: 700; color: #1f2937;">编辑食物</h1>
+                <button class="btn-primary" style="padding: 8px 16px; font-size: 14px;">保存</button>
+            </div>
+            
+            <div class="phone-screen">
+                <div style="padding: 0 20px;">
+                    <!-- 当前图片 -->
+                    <div style="text-align: center; margin-bottom: 20px;">
+                        <img src="https://images.unsplash.com/photo-1546470427-e26264be0b0d?w=150&h=150&fit=crop" style="width: 120px; height: 120px; object-fit: cover; border-radius: 12px;">
+                        <button style="background: #dbeafe; color: #1d4ed8; padding: 6px 12px; border-radius: 8px; font-size: 12px; border: none; margin-top: 8px;">更换图片</button>
+                    </div>
+                    
+                    <!-- 可编辑字段 -->
+                    <div style="space-y: 16px;">
+                        <div>
+                            <label style="font-weight: 600; color: #374151; margin-bottom: 8px; display: block;">食物名称</label>
+                            <input class="form-input" type="text" value="西红柿">
+                        </div>
+                        
+                        <div style="display: flex; gap: 12px;">
+                            <div style="flex: 1;">
+                                <label style="font-weight: 600; color: #374151; margin-bottom: 8px; display: block;">数量</label>
+                                <input class="form-input" type="text" value="3个">
+                            </div>
+                            <div style="flex: 1;">
+                                <label style="font-weight: 600; color: #374151; margin-bottom: 8px; display: block;">分类</label>
+                                <select class="form-input">
+                                    <option selected>蔬菜</option>
+                                    <option>肉类</option>
+                                    <option>乳制品</option>
+                                    <option>水果</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <label style="font-weight: 600; color: #374151; margin-bottom: 8px; display: block;">存放位置</label>
+                            <select class="form-input">
+                                <option selected>冰箱冷藏</option>
+                                <option>冰箱冷冻</option>
+                                <option>常温储存</option>
+                                <option>阴凉干燥处</option>
+                            </select>
+                        </div>
+                        
+                        <div style="display: flex; gap: 12px;">
+                            <div style="flex: 1;">
+                                <label style="font-weight: 600; color: #374151; margin-bottom: 8px; display: block;">生产日期</label>
+                                <input class="form-input" type="date" value="2024-01-10">
+                            </div>
+                            <div style="flex: 1;">
+                                <label style="font-weight: 600; color: #374151; margin-bottom: 8px; display: block;">保质期(天)</label>
+                                <input class="form-input" type="number" value="7">
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <label style="font-weight: 600; color: #374151; margin-bottom: 8px; display: block;">配料成分</label>
+                            <textarea class="form-input" rows="3">新鲜西红柿，富含维生素C、番茄红素等营养成分。无添加剂，天然健康。</textarea>
+                        </div>
+                        
+                        <!-- 删除按钮 -->
+                        <button style="width: 100%; background: #ef4444; color: white; padding: 14px; border-radius: 12px; font-weight: 600; border: none; margin-top: 24px;">🗑️ 删除此食物</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 界面8: 分类管理 -->
+        <div class="phone-frame">
+            <div class="phone-notch"></div>
+            <div class="status-bar">
+                <div>10:02</div>
+                <div style="display: flex; gap: 6px;">
+                    <span>📶</span><span>📶</span><span>🔋</span>
+                </div>
+            </div>
+            <div style="display: flex; align-items: center; justify-content: space-between; padding: 50px 20px 20px;">
+                <button style="background: none; border: none; padding: 8px;">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="15 18 9 12 15 6"></polyline>
+                    </svg>
+                </button>
+                <h1 style="font-size: 18px; font-weight: 700; color: #1f2937;">分类管理</h1>
+                <button style="background: #10b981; color: white; padding: 8px 16px; border-radius: 8px; font-size: 14px; border: none;">+ 新增</button>
+            </div>
+            
+            <div class="phone-screen">
+                <div style="padding: 20px;">
+                    <div style="margin-bottom: 20px;">
+                        <h3 style="font-size: 16px; font-weight: 600; color: #1f2937; margin-bottom: 12px;">预设分类</h3>
+                        <div style="space-y: 8px;">
+                            <div style="display: flex; align-items: center; justify-content: space-between; background: white; padding: 16px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                                <div style="display: flex; align-items: center; gap: 12px;">
+                                    <div style="width: 40px; height: 40px; background: #dcfce7; border-radius: 10px; display: flex; align-items: center; justify-content: center;">🥬</div>
+                                    <div>
+                                        <p style="font-weight: 600; color: #1f2937;">蔬菜</p>
+                                        <p style="font-size: 12px; color: #6b7280;">8个食物</p>
+                                    </div>
+                                </div>
+                                <button style="padding: 6px; background: #f3f4f6; border-radius: 6px; border: none;">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M12 20h9"></path>
+                                        <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+                                    </svg>
+                                </button>
+                            </div>
+                            
+                            <div style="display: flex; align-items: center; justify-content: space-between; background: white; padding: 16px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                                <div style="display: flex; align-items: center; gap: 12px;">
+                                    <div style="width: 40px; height: 40px; background: #fecaca; border-radius: 10px; display: flex; align-items: center; justify-content: center;">🥩</div>
+                                    <div>
+                                        <p style="font-weight: 600; color: #1f2937;">肉类</p>
+                                        <p style="font-size: 12px; color: #6b7280;">5个食物</p>
+                                    </div>
+                                </div>
+                                <button style="padding: 6px; background: #f3f4f6; border-radius: 6px; border: none;">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M12 20h9"></path>
+                                        <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+                                    </svg>
+                                </button>
+                            </div>
+                            
+                            <div style="display: flex; align-items: center; justify-content: space-between; background: white; padding: 16px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                                <div style="display: flex; align-items: center; gap: 12px;">
+                                    <div style="width: 40px; height: 40px; background: #dbeafe; border-radius: 10px; display: flex; align-items: center; justify-content: center;">🥛</div>
+                                    <div>
+                                        <p style="font-weight: 600; color: #1f2937;">乳制品</p>
+                                        <p style="font-size: 12px; color: #6b7280;">3个食物</p>
+                                    </div>
+                                </div>
+                                <button style="padding: 6px; background: #f3f4f6; border-radius: 6px; border: none;">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M12 20h9"></path>
+                                        <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+                                    </svg>
+                                </button>
+                            </div>
+                            
+                            <div style="display: flex; align-items: center; justify-content: space-between; background: white; padding: 16px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                                <div style="display: flex; align-items: center; gap: 12px;">
+                                    <div style="width: 40px; height: 40px; background: #fef3c7; border-radius: 10px; display: flex; align-items: center; justify-content: center;">🍎</div>
+                                    <div>
+                                        <p style="font-weight: 600; color: #1f2937;">水果</p>
+                                        <p style="font-size: 12px; color: #6b7280;">7个食物</p>
+                                    </div>
+                                </div>
+                                <button style="padding: 6px; background: #f3f4f6; border-radius: 6px; border: none;">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M12 20h9"></path>
+                                        <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <h3 style="font-size: 16px; font-weight: 600; color: #1f2937; margin-bottom: 12px;">自定义分类</h3>
+                        <div style="space-y: 8px;">
+                            <div style="display: flex; align-items: center; justify-content: space-between; background: white; padding: 16px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                                <div style="display: flex; align-items: center; gap: 12px;">
+                                    <div style="width: 40px; height: 40px; background: #f3e8ff; border-radius: 10px; display: flex; align-items: center; justify-content: center;">🍯</div>
+                                    <div>
+                                        <p style="font-weight: 600; color: #1f2937;">调料</p>
+                                        <p style="font-size: 12px; color: #6b7280;">4个食物</p>
+                                    </div>
+                                </div>
+                                <div style="display: flex; gap: 8px;">
+                                    <button style="padding: 6px; background: #f3f4f6; border-radius: 6px; border: none;">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M12 20h9"></path>
+                                            <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+                                        </svg>
+                                    </button>
+                                    <button style="padding: 6px; background: #fecaca; border-radius: 6px; border: none;">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2">
+                                            <polyline points="3 6 5 6 21 6"></polyline>
+                                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 新增分类输入框 -->
+                    <div style="background: #f9fafb; border: 2px dashed #d1d5db; border-radius: 12px; padding: 20px; margin-top: 20px; text-align: center;">
+                        <input class="form-input" type="text" placeholder="输入新分类名称" style="margin-bottom: 12px;">
+                        <button class="btn-primary" style="width: 100%;">添加分类</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 界面9: 锁屏推送通知 -->
+        <div class="phone-frame">
+            <div class="phone-notch"></div>
+            <div style="background: url('https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=375&h=812&fit=crop') center/cover; height: 100%; position: relative;">
+                <!-- 锁屏时间 -->
+                <div style="text-align: center; padding-top: 120px; color: white;">
+                    <div style="font-size: 72px; font-weight: 300; margin-bottom: 8px;">10:02</div>
+                    <div style="font-size: 18px; opacity: 0.9;">1月16日 星期二</div>
+                </div>
+                
+                <!-- 推送通知 -->
+                <div style="position: absolute; bottom: 200px; left: 0; right: 0; padding: 0 20px;">
+                    <div class="notification-card">
+                        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+                            <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #4f46e5, #2563eb); border-radius: 10px; display: flex; align-items: center; justify-content: center;">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="white" stroke="white" stroke-width="2">
+                                    <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path>
+                                </svg>
+                            </div>
+                            <div>
+                                <p style="font-weight: 600; color: #1f2937;">食鲜管家</p>
+                                <p style="font-size: 12px; color: #6b7280;">刚刚</p>
+                            </div>
+                        </div>
+                        <h4 style="font-weight: 600; color: #1f2937; margin-bottom: 8px;">⚠️ 今日即将过期提醒</h4>
+                        <p style="color: #6b7280; font-size: 14px; margin-bottom: 12px;">您有3样食物今天即将过期，请及时处理：</p>
+                        <div style="space-y: 8px;">
+                            <div style="display: flex; align-items: center; gap: 8px; background: #fef2f2; padding: 8px; border-radius: 8px;">
+                                <span style="font-size: 16px;">🍅</span>
+                                <span style="font-size: 14px; color: #dc2626; font-weight: 600;">西红柿 (剩1天)</span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 8px; background: #fef2f2; padding: 8px; border-radius: 8px;">
+                                <span style="font-size: 16px;">🥩</span>
+                                <span style="font-size: 14px; color: #dc2626; font-weight: 600;">鸡胸肉 (剩2天)</span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 8px; background: #fef2f2; padding: 8px; border-radius: 8px;">
+                                <span style="font-size: 16px;">🥛</span>
+                                <span style="font-size: 14px; color: #dc2626; font-weight: 600;">牛奶 (今天过期)</span>
+                            </div>
+                        </div>
+                        <div style="display: flex; gap: 8px; margin-top: 12px;">
+                            <button style="flex: 1; background: #3b82f6; color: white; padding: 8px; border-radius: 8px; font-size: 12px; border: none;">查看详情</button>
+                            <button style="flex: 1; background: #f3f4f6; color: #6b7280; padding: 8px; border-radius: 8px; font-size: 12px; border: none;">稍后提醒</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 底部滑动提示 -->
+                <div style="position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); color: white; text-align: center; opacity: 0.7;">
+                    <div style="width: 40px; height: 4px; background: white; border-radius: 2px; margin: 0 auto 8px;"></div>
+                    <p style="font-size: 12px;">向上滑动解锁</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 界面10: 登录页面 -->
+        <div class="phone-frame">
+            <div class="phone-notch"></div>
+            <div class="status-bar">
+                <div>10:02</div>
+                <div style="display: flex; gap: 6px;">
+                    <span>📶</span><span>📶</span><span>🔋</span>
+                </div>
+            </div>
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); height: 100%; display: flex; flex-direction: column; justify-content: center; padding: 40px;">
+                <!-- Logo区域 -->
+                <div style="text-align: center; margin-bottom: 60px;">
+                    <div style="width: 100px; height: 100px; background: white; border-radius: 25px; margin: 0 auto 20px; display: flex; align-items: center; justify-content: center; font-size: 48px;">🍎</div>
+                    <h1 style="color: white; font-size: 32px; font-weight: 700; margin-bottom: 8px;">食鲜管家</h1>
+                    <p style="color: rgba(255,255,255,0.8); font-size: 16px;">智能管理食物保质期</p>
+                </div>
+                
+                <!-- 登录表单 -->
+                <div style="space-y: 20px;">
+                    <div>
+                        <input style="width: 100%; padding: 16px; border: none; border-radius: 12px; font-size: 16px; background: rgba(255,255,255,0.9);" type="text" placeholder="手机号码">
+                    </div>
+                    <div>
+                        <input style="width: 100%; padding: 16px; border: none; border-radius: 12px; font-size: 16px; background: rgba(255,255,255,0.9);" type="password" placeholder="密码">
+                    </div>
+                    <button style="width: 100%; background: white; color: #667eea; padding: 16px; border-radius: 12px; font-size: 16px; font-weight: 600; border: none; margin-top: 24px;">登录</button>
+                </div>
+                
+                <!-- 其他选项 -->
+                <div style="text-align: center; margin-top: 40px;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 30px;">
+                        <button style="background: none; border: none; color: rgba(255,255,255,0.8); font-size: 14px;">忘记密码？</button>
+                        <button style="background: none; border: none; color: rgba(255,255,255,0.8); font-size: 14px;">注册账号</button>
+                    </div>
+                    
+                    <div style="margin-bottom: 20px;">
+                        <p style="color: rgba(255,255,255,0.6); font-size: 14px; margin-bottom: 20px;">或使用以下方式登录</p>
+                        <div style="display: flex; justify-content: center; gap: 20px;">
+                            <button style="width: 50px; height: 50px; background: rgba(255,255,255,0.2); border-radius: 25px; border: none; color: white; font-size: 20px;">📱</button>
+                            <button style="width: 50px; height: 50px; background: rgba(255,255,255,0.2); border-radius: 25px; border: none; color: white; font-size: 20px;">💬</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 界面11: 注册页面 -->
+        <div class="phone-frame">
+            <div class="phone-notch"></div>
+            <div class="status-bar">
+                <div>10:02</div>
+                <div style="display: flex; gap: 6px;">
+                    <span>📶</span><span>📶</span><span>🔋</span>
+                </div>
+            </div>
+            <div style="display: flex; align-items: center; justify-content: space-between; padding: 50px 20px 20px;">
+                <button style="background: none; border: none; padding: 8px;">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="15 18 9 12 15 6"></polyline>
+                    </svg>
+                </button>
+                <h1 style="font-size: 18px; font-weight: 700; color: #1f2937;">注册账号</h1>
+                <div style="width: 40px;"></div>
+            </div>
+            
+            <div class="phone-screen">
+                <div style="padding: 20px;">
+                    <div style="text-align: center; margin-bottom: 40px;">
+                        <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 20px; margin: 0 auto 16px; display: flex; align-items: center; justify-content: center; font-size: 36px;">🍎</div>
+                        <p style="color: #6b7280; font-size: 16px;">创建您的食鲜管家账号</p>
+                    </div>
+                    
+                    <div style="space-y: 20px;">
+                        <div>
+                            <label style="font-weight: 600; color: #374151; margin-bottom: 8px; display: block;">昵称</label>
+                            <input class="form-input" type="text" placeholder="请输入昵称">
+                        </div>
+                        <div>
+                            <label style="font-weight: 600; color: #374151; margin-bottom: 8px; display: block;">手机号码</label>
+                            <input class="form-input" type="tel" placeholder="请输入手机号码">
+                        </div>
+                        <div>
+                            <label style="font-weight: 600; color: #374151; margin-bottom: 8px; display: block;">验证码</label>
+                            <div style="display: flex; gap: 12px;">
+                                <input class="form-input" type="text" placeholder="请输入验证码" style="flex: 1;">
+                                <button style="background: #dbeafe; color: #1d4ed8; padding: 12px 16px; border-radius: 12px; font-size: 14px; border: none; white-space: nowrap;">获取验证码</button>
+                            </div>
+                        </div>
+                        <div>
+                            <label style="font-weight: 600; color: #374151; margin-bottom: 8px; display: block;">设置密码</label>
+                            <input class="form-input" type="password" placeholder="请设置6-20位密码">
+                        </div>
+                        <div>
+                            <label style="font-weight: 600; color: #374151; margin-bottom: 8px; display: block;">确认密码</label>
+                            <input class="form-input" type="password" placeholder="请再次输入密码">
+                        </div>
+                        
+                        <div style="display: flex; align-items: center; gap: 8px; margin-top: 20px;">
+                            <input type="checkbox" style="width: 16px; height: 16px;">
+                            <span style="font-size: 14px; color: #6b7280;">我已阅读并同意</span>
+                            <button style="background: none; border: none; color: #2563eb; font-size: 14px;">《用户协议》</button>
+                            <span style="font-size: 14px; color: #6b7280;">和</span>
+                            <button style="background: none; border: none; color: #2563eb; font-size: 14px;">《隐私政策》</button>
+                        </div>
+                        
+                        <button class="btn-primary" style="width: 100%; margin-top: 30px;">注册</button>
+                        
+                        <div style="text-align: center; margin-top: 20px;">
+                            <span style="color: #6b7280; font-size: 14px;">已有账号？</span>
+                            <button style="background: none; border: none; color: #2563eb; font-size: 14px;">立即登录</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 界面12: 设置页面 -->
+        <div class="phone-frame">
+            <div class="phone-notch"></div>
+            <div class="status-bar">
+                <div>10:02</div>
+                <div style="display: flex; gap: 6px;">
+                    <span>📶</span><span>📶</span><span>🔋</span>
+                </div>
+            </div>
+            <div style="display: flex; align-items: center; justify-content: space-between; padding: 50px 20px 20px;">
+                <button style="background: none; border: none; padding: 8px;">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="15 18 9 12 15 6"></polyline>
+                    </svg>
+                </button>
+                <h1 style="font-size: 18px; font-weight: 700; color: #1f2937;">设置</h1>
+                <div style="width: 40px;"></div>
+            </div>
+            
+            <div class="phone-screen">
+                <div style="padding: 20px;">
+                    <!-- 通知设置 -->
+                    <div style="background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 20px;">
+                        <div style="padding: 16px; border-bottom: 1px solid #f3f4f6;">
+                            <h3 style="font-weight: 600; color: #1f2937; margin-bottom: 4px;">通知设置</h3>
+                            <p style="font-size: 12px; color: #6b7280;">管理推送通知和提醒</p>
+                        </div>
+                        
+                        <div style="display: flex; align-items: center; justify-content: space-between; padding: 16px; border-bottom: 1px solid #f3f4f6;">
+                            <div>
+                                <p style="font-weight: 600; color: #1f2937;">过期提醒</p>
+                                <p style="font-size: 12px; color: #6b7280;">食物即将过期时推送通知</p>
+                            </div>
+                            <div style="width: 50px; height: 30px; background: #2563eb; border-radius: 15px; position: relative; cursor: pointer;">
+                                <div style="width: 26px; height: 26px; background: white; border-radius: 50%; position: absolute; top: 2px; right: 2px; transition: all 0.2s;"></div>
+                            </div>
+                        </div>
+                        
+                        <div style="display: flex; align-items: center; justify-content: space-between; padding: 16px; border-bottom: 1px solid #f3f4f6;">
+                            <div>
+                                <p style="font-weight: 600; color: #1f2937;">提前提醒天数</p>
+                                <p style="font-size: 12px; color: #6b7280;">提前几天开始提醒</p>
+                            </div>
+                            <select style="padding: 6px 12px; border: 1px solid #d1d5db; border-radius: 8px; background: white;">
+                                <option>1天</option>
+                                <option selected>3天</option>
+                                <option>7天</option>
+                            </select>
+                        </div>
+                        
+                        <div style="display: flex; align-items: center; justify-content: space-between; padding: 16px;">
+                            <div>
+                                <p style="font-weight: 600; color: #1f2937;">提醒时间</p>
+                                <p style="font-size: 12px; color: #6b7280;">每天推送通知的时间</p>
+                            </div>
+                            <button style="padding: 6px 12px; border: 1px solid #d1d5db; border-radius: 8px; background: white; color: #1f2937;">09:00</button>
+                        </div>
+                    </div>
+                    
+                    <!-- 数据管理 -->
+                    <div style="background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 20px;">
+                        <div style="padding: 16px; border-bottom: 1px solid #f3f4f6;">
+                            <h3 style="font-weight: 600; color: #1f2937; margin-bottom: 4px;">数据管理</h3>
+                            <p style="font-size: 12px; color: #6b7280;">管理您的数据和隐私</p>
+                        </div>
+                        
+                        <div style="display: flex; align-items: center; justify-content: space-between; padding: 16px; border-bottom: 1px solid #f3f4f6;">
+                            <div>
+                                <p style="font-weight: 600; color: #1f2937;">数据备份</p>
+                                <p style="font-size: 12px; color: #6b7280;">备份您的食物数据</p>
+                            </div>
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2">
+                                <polyline points="9 18 15 12 9 6"></polyline>
+                            </svg>
+                        </div>
+                        
+                        <div style="display: flex; align-items: center; justify-content: space-between; padding: 16px; border-bottom: 1px solid #f3f4f6;">
+                            <div>
+                                <p style="font-weight: 600; color: #1f2937;">数据导出</p>
+                                <p style="font-size: 12px; color: #6b7280;">导出所有食物记录</p>
+                            </div>
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2">
+                                <polyline points="9 18 15 12 9 6"></polyline>
+                            </svg>
+                        </div>
+                        
+                        <div style="display: flex; align-items: center; justify-content: space-between; padding: 16px;">
+                            <div>
+                                <p style="font-weight: 600; color: #dc2626;">清除所有数据</p>
+                                <p style="font-size: 12px; color: #6b7280;">删除所有食物记录</p>
+                            </div>
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2">
+                                <polyline points="9 18 15 12 9 6"></polyline>
+                            </svg>
+                        </div>
+                    </div>
+                    
+                    <!-- 其他设置 -->
+                    <div style="background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                        <div style="display: flex; align-items: center; justify-content: space-between; padding: 16px; border-bottom: 1px solid #f3f4f6;">
+                            <div>
+                                <p style="font-weight: 600; color: #1f2937;">隐私政策</p>
+                            </div>
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2">
+                                <polyline points="9 18 15 12 9 6"></polyline>
+                            </svg>
+                        </div>
+                        
+                        <div style="display: flex; align-items: center; justify-content: space-between; padding: 16px; border-bottom: 1px solid #f3f4f6;">
+                            <div>
+                                <p style="font-weight: 600; color: #1f2937;">用户协议</p>
+                            </div>
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2">
+                                <polyline points="9 18 15 12 9 6"></polyline>
+                            </svg>
+                        </div>
+                        
+                        <div style="display: flex; align-items: center; justify-content: space-between; padding: 16px; border-bottom: 1px solid #f3f4f6;">
+                            <div>
+                                <p style="font-weight: 600; color: #1f2937;">检查更新</p>
+                                <p style="font-size: 12px; color: #6b7280;">当前版本 v1.0.0</p>
+                            </div>
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2">
+                                <polyline points="9 18 15 12 9 6"></polyline>
+                            </svg>
+                        </div>
+                        
+                        <div style="padding: 16px;">
+                            <button style="width: 100%; background: #ef4444; color: white; padding: 14px; border-radius: 12px; font-weight: 600; border: none;">退出登录</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // 简单的交互功能
+        document.addEventListener('DOMContentLoaded', function() {
+            // 长按菜单显示/隐藏
+            const foodCards = document.querySelectorAll('.food-card');
+            foodCards.forEach(card => {
+                let pressTimer;
+                
+                card.addEventListener('mousedown', function() {
+                    pressTimer = setTimeout(() => {
+                        const menu = card.querySelector('.long-press-menu');
+                        if (menu) {
+                            menu.style.opacity = '1';
+                            menu.style.pointerEvents = 'auto';
+                        }
+                    }, 500);
+                });
+                
+                card.addEventListener('mouseup', function() {
+                    clearTimeout(pressTimer);
+                });
+                
+                card.addEventListener('mouseleave', function() {
+                    clearTimeout(pressTimer);
+                    const menu = card.querySelector('.long-press-menu');
+                    if (menu) {
+                        menu.style.opacity = '0';
+                        menu.style.pointerEvents = 'none';
+                    }
+                });
+            });
+            
+            // 按钮点击效果
+            const buttons = document.querySelectorAll('button, .fab');
+            buttons.forEach(button => {
+                button.addEventListener('click', function(e) {
+                    // 创建点击波纹效果
+                    const ripple = document.createElement('div');
+                    ripple.style.position = 'absolute';
+                    ripple.style.borderRadius = '50%';
+                    ripple.style.background = 'rgba(255,255,255,0.6)';
+                    ripple.style.transform = 'scale(0)';
+                    ripple.style.animation = 'ripple 0.6s linear';
+                    ripple.style.left = e.offsetX - 10 + 'px';
+                    ripple.style.top = e.offsetY - 10 + 'px';
+                    ripple.style.width = '20px';
+                    ripple.style.height = '20px';
+                    
+                    this.style.position = 'relative';
+                    this.style.overflow = 'hidden';
+                    this.appendChild(ripple);
+                    
+                    setTimeout(() => {
+                        ripple.remove();
+                    }, 600);
+                });
+            });
+        });
+        
+        // 添加CSS动画
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes ripple {
+                to {
+                    transform: scale(4);
+                    opacity: 0;
+                }
+            }
+            
+            .food-card {
+                transition: all 0.3s ease;
+            }
+            
+            .food-card:hover {
+                transform: translateY(-4px);
+                box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+            }
+            
+            button:active, .fab:active {
+                transform: scale(0.95);
+            }
+            
+            .form-input:focus {
+                box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+</body>
+</html>

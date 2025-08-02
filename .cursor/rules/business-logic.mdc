@@ -1,0 +1,200 @@
+---
+description: "智能食物保鲜管家业务逻辑和功能实现指南"
+---
+
+# 业务逻辑指南
+
+参考文档: [需求文档.md](mdc:需求文档.md)
+
+## 核心业务功能
+
+### 1. 食物管理系统
+
+#### 食物状态判断
+```typescript
+type FoodStatus = 'normal' | 'expiring_soon' | 'expired';
+
+function getFoodStatus(expiryDate: string): FoodStatus {
+  const today = new Date();
+  const expiry = new Date(expiryDate);
+  const diffDays = Math.ceil((expiry.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+  
+  if (diffDays < 0) return 'expired';
+  if (diffDays <= 3) return 'expiring_soon';
+  return 'normal';
+}
+```
+
+#### 颜色编码规范
+- 绿色: 剩余保质期 > 3天 ("剩余X天")
+- 橙色: 剩余保质期 1-3天 ("还剩X天") 
+- 红色: 已过期/今天过期 ("已过期X天"或"今天过期")
+
+#### 排序功能
+- 按过期时间 (默认，从近到远)
+- 按添加时间 
+- 按分类
+
+### 2. 智能菜谱推荐
+
+#### 临期食物筛选
+```python
+def get_expiring_foods(user_id, days_ahead=3):
+    """获取即将过期的食物"""
+    cutoff_date = datetime.now() + timedelta(days=days_ahead)
+    return Food.query.filter(
+        Food.user_id == user_id,
+        Food.expiry_date <= cutoff_date,
+        Food.is_deleted == False
+    ).all()
+```
+
+#### AI菜谱生成逻辑
+- 用户选择临期食材
+- 调用AI模型生成菜谱
+- 返回菜谱名称、视频链接、所需食材列表
+- 高亮显示用户已有的食材
+
+### 3. 购物清单管理
+
+#### 清单项状态管理
+```typescript
+interface ShoppingItem {
+  id: number;
+  itemName: string;
+  isChecked: boolean;
+  fromFoodId?: number; // 从食物详情添加的关联ID
+}
+```
+
+#### 自动添加逻辑
+- 从首页长按食物卡片选择"添加至购物单"
+- 自动提取食物名称和分类信息
+- 记录来源食物ID便于追溯
+
+### 4. 推送通知系统
+
+#### 通知触发条件
+```python
+def check_expiry_notifications():
+    """检查需要发送过期提醒的食物"""
+    today = datetime.now().date()
+    
+    # 当天过期 - 强提醒 (上午9:00)
+    expiring_today = Food.query.filter(
+        Food.expiry_date == today,
+        Food.is_deleted == False
+    ).all()
+    
+    # 3天内过期 - 弱提醒
+    expiring_soon = Food.query.filter(
+        Food.expiry_date == today + timedelta(days=3),
+        Food.is_deleted == False  
+    ).all()
+    
+    return expiring_today, expiring_soon
+```
+
+#### 通知内容格式
+- 标题: "食物过期提醒"
+- 正文: "您有N件食物即将在今天过期：牛奶、面包..."
+- 点击通知跳转到首页并高亮显示相关食物
+
+### 5. 用户个性化设置
+
+#### 分类管理
+- 系统预置分类：蔬菜水果、肉蛋奶、零食饮料、主食
+- 用户自定义分类：可编辑名称和删除
+- 分类不能删除如果仍有食物使用
+
+#### 通知设置
+```typescript
+interface NotificationSettings {
+  enableExpiryPush: boolean;    // 是否启用过期提醒
+  pushLeadDays: number;         // 提前几天提醒 (默认3天)
+  pushTime: string;             // 提醒时间 (默认09:00)
+}
+```
+
+## 数据验证规则
+
+### 食物录入验证 
+```python
+class FoodForm(FlaskForm):
+    name = StringField('食物名称', validators=[DataRequired(), Length(1, 100)])
+    quantity = DecimalField('数量', validators=[DataRequired(), NumberRange(min=0.01)])
+    expiry_date = DateField('过期日期', validators=[DataRequired()])
+    
+    def validate_expiry_date(self, field):
+        if field.data < datetime.now().date():
+            raise ValidationError('过期日期不能早于今天')
+```
+
+### 自动计算逻辑
+```python
+def calculate_expiry_date(production_date, shelf_life_value, shelf_life_unit):
+    """根据生产日期和保质期计算过期时间"""
+    if shelf_life_unit == 'day':
+        delta = timedelta(days=shelf_life_value)
+    elif shelf_life_unit == 'month':
+        delta = timedelta(days=shelf_life_value * 30)  # 近似计算
+    elif shelf_life_unit == 'year':
+        delta = timedelta(days=shelf_life_value * 365)
+    
+    return production_date + delta
+```
+
+## AI功能集成
+
+### OCR配料识别
+```python
+def analyze_ingredients(ingredients_text):
+    """分析配料表，识别有害成分"""
+    harmful_ingredients = [
+        '阿斯巴甜', '高果糖浆', '山梨酸钾', 
+        '苯甲酸钠', '胭脂红', '日落黄'
+    ]
+    
+    detected_harmful = []
+    for ingredient in harmful_ingredients:
+        if ingredient in ingredients_text:
+            detected_harmful.append(ingredient)
+    
+    return detected_harmful
+```
+
+### 营养分析
+```python
+def calculate_nutrition_info(food_name, quantity):
+    """AI计算营养信息和运动消耗"""
+    # 调用营养数据库API或AI模型
+    calories = estimate_calories(food_name, quantity)
+    
+    # 计算运动消耗建议
+    walking_km = round(calories / 50, 1)  # 每公里消耗约50卡
+    swimming_min = round(calories / 10, 0)  # 每分钟消耗约10卡
+    
+    return {
+        'calories_kcal': calories,
+        'energy_offset_info': f'建议：步行 {walking_km} 公里 或 游泳 {swimming_min} 分钟'
+    }
+```
+
+## 性能优化策略
+
+### 数据库查询优化
+- 食物列表按过期时间排序添加索引
+- 用户相关数据添加 user_id 索引
+- 软删除避免物理删除数据
+
+### 图片处理
+- 上传时压缩图片大小
+- 生成多种尺寸缩略图
+- CDN加速图片访问
+
+### 缓存策略
+- 分类和位置等相对静态数据缓存
+- 用户设置信息缓存
+- API响应适当缓存减少数据库查询
+
+这个业务逻辑指南涵盖了智能食物保鲜管家的核心功能实现，确保前后端开发按照统一的业务规则进行。

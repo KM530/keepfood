@@ -1,0 +1,158 @@
+---
+globs: foodback/**/*.py
+description: "Flask 后端开发规范和架构指南"
+---
+
+# Flask 后端开发指南
+
+## 项目架构
+
+### 应用工厂模式
+项目使用 [foodback/app.py](mdc:foodback/app.py) 的工厂模式：
+- `create_app()` 创建Flask应用实例
+- 分别注册扩展、蓝图、错误处理等
+- 支持不同环境配置
+
+### 蓝图架构
+```python
+foodback/
+├── public/          # 公共功能 (首页、认证)
+│   ├── views.py     # 路由视图
+│   └── forms.py     # 表单定义
+├── user/            # 用户模块
+│   ├── models.py    # 数据模型
+│   ├── views.py     # 视图函数
+│   └── forms.py     # 表单类
+└── extensions.py    # Flask扩展初始化
+```
+
+## 数据库设计
+
+### 模型基类
+使用 [foodback/database.py](mdc:foodback/database.py) 提供的基类：
+- `PkModel`: 包含主键的基础模型
+- `CRUDMixin`: CRUD操作混入类
+- `reference_col()`: 外键关联帮助函数
+
+### 模型规范
+根据 [数据库表结构.md](mdc:数据库表结构.md) 实现：
+
+```python
+class Food(PkModel):
+    """食物库存模型"""
+    __tablename__ = 'foods'
+    
+    user_id = reference_col('users', nullable=False)
+    name = Column(db.String(100), nullable=False)
+    quantity = Column(db.Numeric(10, 2), nullable=False)
+    expiry_date = Column(db.Date, nullable=False)
+    # ... 其他字段
+    
+    # 关联关系
+    user = relationship('User', backref='foods')
+    category = relationship('Category')
+```
+
+## API设计规范
+
+### 响应格式
+根据 [接口文档.md](mdc:接口文档.md) 统一响应格式：
+```python
+{
+    "code": 0,          # 0=成功，非0=错误码
+    "body": {...},      # 响应数据
+    "message": "成功"   # 提示信息
+}
+```
+
+### 路由命名
+```python
+# REST风格API路由
+@blueprint.route('/foods', methods=['GET'])           # 获取列表
+@blueprint.route('/foods', methods=['POST'])          # 创建
+@blueprint.route('/foods/<int:id>', methods=['GET'])  # 获取详情
+@blueprint.route('/foods/<int:id>', methods=['PUT'])  # 更新
+@blueprint.route('/foods/<int:id>', methods=['DELETE']) # 删除
+```
+
+### 认证装饰器
+```python
+from flask_login import login_required
+
+@blueprint.route('/api/foods')
+@login_required
+def get_foods():
+    # 需要登录的接口
+    pass
+```
+
+## 核心功能模块
+
+### 用户认证
+- 使用 Flask-Login + Bcrypt
+- JWT Token 支持
+- 密码哈希存储
+
+### 文件上传
+- 支持图片上传 (食物图片、用户头像)
+- 文件类型验证
+- 云存储集成
+
+### AI功能集成
+- OCR配料识别
+- 菜谱生成
+- 营养分析
+
+### 推送通知
+- APNS (iOS) / FCM (Android)
+- 过期提醒定时任务
+- 设备令牌管理
+
+## 开发约定
+
+### 代码风格
+- 使用 snake_case 命名函数和变量
+- 类名使用 PascalCase
+- 常量使用 UPPER_CASE
+- 添加类型注解和文档字符串
+
+### 错误处理
+```python
+@blueprint.errorhandler(404)
+def not_found(error):
+    return jsonify({
+        "code": 404,
+        "message": "资源不存在"
+    }), 404
+```
+
+### 环境配置
+使用 [foodback/settings.py](mdc:foodback/settings.py) 管理配置：
+- 通过环境变量配置
+- 支持开发/生产环境切换
+- 敏感信息使用 .env 文件
+
+## 数据库操作
+
+### 迁移管理
+```bash
+# 创建迁移
+flask db migrate -m "描述信息"
+
+# 应用迁移
+flask db upgrade
+
+# 回滚迁移
+flask db downgrade
+```
+
+### 查询优化
+- 使用索引优化查询性能
+- 避免N+1查询问题
+- 合理使用 eager loading
+
+## 测试规范
+- 单元测试覆盖核心业务逻辑
+- API测试验证接口功能
+- 使用 pytest 框架
+- 测试数据库隔离

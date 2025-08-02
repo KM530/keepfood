@@ -1,0 +1,6 @@
+[run]
+source = foodback
+omit = 
+    tests/*
+    autoapp.py
+
