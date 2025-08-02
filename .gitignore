@@ -1,0 +1,83 @@
+# ===================================================================
+# 通用规则 (General)
+# ===================================================================
+# 操作系统生成的文件
+.DS_Store
+Thumbs.db
+
+# 编辑器/IDE配置文件 (根据你的使用情况选择保留或删除)
+.idea/
+.vscode/
+.cursor/
+
+# 本地环境变量文件 (非常重要，避免泄露密钥)
+.env
+.env.*.local
+.env.local
+
+
+# ===================================================================
+# 前端项目 (Frontend - Expo/React Native)
+# 基于你提供的文件
+# ===================================================================
+# 依赖
+node_modules/
+
+# Expo 临时文件
+.expo/
+dist/
+web-build/
+expo-env.d.ts
+
+# 原生编译文件
+.kotlin/
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+# Metro 缓存
+.metro-health-check*
+
+# 调试日志
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+
+# TypeScript 编译缓存
+*.tsbuildinfo
+
+# 示例文件
+app-example
+
+
+# ===================================================================
+# 后端项目 (Backend - Python)
+# ===================================================================
+# Python 虚拟环境
+venv/
+.venv/
+env/
+.env/
+
+# Python 缓存文件
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Python 打包/安装文件
+build/
+dist/
+*.egg-info/
+*.egg
+
+# 本地数据库 (例如 SQLite)
+*.sqlite3
+db.sqlite3
+
+# Pipenv / Poetry 文件
+Pipfile.lock
+poetry.lock

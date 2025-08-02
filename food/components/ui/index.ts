@@ -22,6 +22,7 @@ export {
 export { SearchBar } from './SearchBar';
 export { FilterSortBar } from './FilterSortBar';
 export { ImagePicker } from './ImagePicker';
+export { MultiImagePicker } from './MultiImagePicker';
 export { Picker } from './Picker';
 export { ShoppingListItem } from './ShoppingListItem';
 

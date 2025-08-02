@@ -35,6 +35,7 @@ import type {
   NotificationSettings,
   PaginatedResponse,
   GetFoodsParams,
+  AIFoodAnalysisResponse,
 } from '@/types';
 
 // ============= HTTP 客户端实现 =============
@@ -469,6 +470,21 @@ class APIClientImpl implements APIClient {
     formData.append('image', image);
     
     const response = await this.http.post('/ai/ocr-ingredients', formData);
+    return response.body;
+  }
+
+  async analyzeFoodImages(images: File[]): Promise<AIFoodAnalysisResponse> {
+    const formData = new FormData();
+    images.forEach((image, index) => {
+      formData.append('images', image);
+    });
+    
+    const response = await this.http.post('/ai/analyze-food', formData);
+    return response.body;
+  }
+
+  async getAIStatus(): Promise<{ available: boolean; message: string }> {
+    const response = await this.http.get('/ai/status');
     return response.body;
   }
 
