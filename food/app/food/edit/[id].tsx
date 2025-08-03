@@ -5,85 +5,132 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/contexts/ThemeContext';
 import { Layout } from '@/components/ui/Layout';
+import { Loading } from '@/components/ui/Loading';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
-import { ImagePicker } from '@/components/ui/ImagePicker';
+import { MultiImagePicker } from '@/components/ui/MultiImagePicker';
 import { Picker } from '@/components/ui/Picker';
-import { Loading } from '@/components/ui/Loading';
+import { InputModal } from '@/components/ui/InputModal';
 import { useCategories } from '@/hooks/useCategories';
 import { useLocations } from '@/hooks/useLocations';
 import { apiClient } from '@/lib/api';
-import type { Food, UpdateFoodRequest } from '@/types';
+import { formatDate } from '@/utils/date';
+import type { Food, CreateFoodRequest } from '@/types';
 
 interface FormData {
   name: string;
-  description: string;
   quantity: string;
   unit: string;
   expiryDate: string;
   categoryId?: number;
   locationId?: number;
-  imageUri?: string;
+  images: string[];
+  productionDate: string;
+  shelfLifeValue: string;
+  shelfLifeUnit: 'day' | 'month' | 'year';
+  ingredientsText: string;
+  harmfulIngredients: string[];
+  caloriesKcal: string;
+  energyOffsetInfo: string;
 }
 
 interface FormErrors {
   name?: string;
   quantity?: string;
   expiryDate?: string;
+  categoryId?: string;
 }
 
 export default function EditFoodScreen() {
   const { theme } = useTheme();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { categories } = useCategories();
-  const { locations } = useLocations();
-  
   const [food, setFood] = useState<Food | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  
+  const [error, setError] = useState<string | null>(null);
+  const [aiAnalyzing, setAiAnalyzing] = useState(false);
+  const [aiAvailable, setAiAvailable] = useState(false);
+
+  const { categories, loading: categoriesLoading } = useCategories();
+  const { locations, loading: locationsLoading } = useLocations();
+
+  // 表单数据
   const [formData, setFormData] = useState<FormData>({
     name: '',
-    description: '',
     quantity: '',
     unit: '',
     expiryDate: '',
+    categoryId: undefined,
+    locationId: undefined,
+    images: [],
+    productionDate: '',
+    shelfLifeValue: '',
+    shelfLifeUnit: 'day',
+    ingredientsText: '',
+    harmfulIngredients: [],
+    caloriesKcal: '',
+    energyOffsetInfo: '',
   });
-  
+
   const [errors, setErrors] = useState<FormErrors>({});
+  const [showDateModal, setShowDateModal] = useState(false);
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [showLocationModal, setShowLocationModal] = useState(false);
 
   // 获取食物详情
-  useEffect(() => {
-    const fetchFood = async () => {
-      if (!id) return;
+  const fetchFoodDetail = useCallback(async () => {
+    if (!id) return;
 
-      setLoading(true);
+    setLoading(true);
+    setError(null);
+
+    try {
+      const response = await apiClient.getFood(parseInt(id));
+      setFood(response);
+      
+      // 填充表单数据
+      setFormData({
+        name: response.name,
+        quantity: response.quantity.toString(),
+        unit: response.unit,
+        expiryDate: response.expiry_date,
+        categoryId: response.category_id,
+        locationId: response.location_id,
+        images: response.image_url || [],
+        productionDate: response.production_date || '',
+        shelfLifeValue: response.shelf_life_value?.toString() || '',
+        shelfLifeUnit: response.shelf_life_unit || 'day',
+        ingredientsText: response.ingredients_text || '',
+        harmfulIngredients: response.harmful_ingredients_json || [],
+        caloriesKcal: response.calories_kcal?.toString() || '',
+        energyOffsetInfo: response.energy_offset_info || '',
+      });
+    } catch (err) {
+      console.error('Failed to fetch food detail:', err);
+      setError(err instanceof Error ? err.message : '获取食物详情失败');
+    } finally {
+      setLoading(false);
+    }
+  }, [id]);
+
+  useEffect(() => {
+    fetchFoodDetail();
+  }, [fetchFoodDetail]);
+
+  // 检查AI服务状态
+  useEffect(() => {
+    const checkAIStatus = async () => {
       try {
-        const response = await apiClient.getFood(parseInt(id));
-        setFood(response);
-        
-        // 填充表单数据
-        setFormData({
-          name: response.name,
-          description: response.description || '',
-          quantity: response.quantity.toString(),
-          unit: response.unit || '',
-          expiryDate: response.expiryDate.split('T')[0], // 转换为 YYYY-MM-DD 格式
-          categoryId: response.category?.id,
-          locationId: response.location?.id,
-          imageUri: response.imageUrl,
-        });
+        const status = await apiClient.getAIStatus();
+        setAiAvailable(status.available);
       } catch (error) {
-        Alert.alert('错误', '获取食物信息失败');
-        router.back();
-      } finally {
-        setLoading(false);
+        console.error('Failed to get AI status:', error);
+        setAiAvailable(false);
       }
     };
-
-    fetchFood();
-  }, [id]);
+    checkAIStatus();
+  }, []);
 
   // 表单验证
   const validateForm = (): boolean => {
@@ -93,22 +140,16 @@ export default function EditFoodScreen() {
       newErrors.name = '请输入食物名称';
     }
 
-    if (!formData.quantity.trim()) {
-      newErrors.quantity = '请输入数量';
-    } else if (isNaN(parseFloat(formData.quantity)) || parseFloat(formData.quantity) <= 0) {
-      newErrors.quantity = '请输入有效的数量';
+    if (!formData.quantity || parseFloat(formData.quantity) <= 0) {
+      newErrors.quantity = '请输入有效数量';
     }
 
-    if (!formData.expiryDate.trim()) {
+    if (!formData.expiryDate) {
       newErrors.expiryDate = '请选择到期日期';
-    } else {
-      const expiryDate = new Date(formData.expiryDate);
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      
-      if (expiryDate < today) {
-        newErrors.expiryDate = '到期日期不能早于今天';
-      }
+    }
+
+    if (!formData.categoryId) {
+      newErrors.categoryId = '请选择分类';
     }
 
     setErrors(newErrors);
@@ -116,85 +157,212 @@ export default function EditFoodScreen() {
   };
 
   // 更新表单数据
-  const updateFormData = useCallback((field: keyof FormData, value: string | number) => {
+  const updateFormData = useCallback((field: keyof FormData, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+    
     // 清除对应字段的错误
     if (errors[field as keyof FormErrors]) {
       setErrors(prev => ({ ...prev, [field]: undefined }));
     }
   }, [errors]);
 
-  // 处理图片选择
-  const handleImageSelected = useCallback((uri: string) => {
-    updateFormData('imageUri', uri);
-  }, [updateFormData]);
-
-  const handleImageRemoved = useCallback(() => {
-    updateFormData('imageUri', '');
-  }, [updateFormData]);
-
-  // 处理日期选择
+  // 日期选择
   const handleDatePress = () => {
-    Alert.prompt(
-      '选择到期日期',
-      '请输入到期日期 (YYYY-MM-DD)',
-      [
-        { text: '取消', style: 'cancel' },
-        {
-          text: '确定',
-          onPress: (value) => {
-            if (value) {
-              updateFormData('expiryDate', value);
-            }
-          },
-        },
-      ],
-      'plain-text',
-      formData.expiryDate
-    );
+    setShowDateModal(true);
   };
 
-  // 提交表单
-  const handleSubmit = async () => {
-    if (!validateForm() || !food) {
+  const handleDateConfirm = (value: string) => {
+    setShowDateModal(false);
+    if (value) {
+      updateFormData('expiryDate', value);
+    }
+  };
+
+  // 分类选择
+  const handleAddCategory = () => {
+    setShowCategoryModal(true);
+  };
+
+  const handleCategoryConfirm = async (value: string) => {
+    setShowCategoryModal(false);
+    if (value.trim()) {
+      try {
+        const newCategory = await apiClient.createCategory({ name: value.trim() });
+        updateFormData('categoryId', newCategory.id);
+      } catch (error) {
+        Alert.alert('错误', '创建分类失败');
+      }
+    }
+  };
+
+  // 位置选择
+  const handleAddLocation = () => {
+    setShowLocationModal(true);
+  };
+
+  const handleLocationConfirm = async (value: string) => {
+    setShowLocationModal(false);
+    if (value.trim()) {
+      try {
+        const newLocation = await apiClient.createLocation({ name: value.trim() });
+        updateFormData('locationId', newLocation.id);
+      } catch (error) {
+        Alert.alert('错误', '创建位置失败');
+      }
+    }
+  };
+
+  // AI分析图片
+  const handleAIAnalysis = async () => {
+    if (!aiAvailable) {
+      Alert.alert('提示', 'AI分析服务暂时不可用');
+      return;
+    }
+    if (formData.images.length === 0) {
+      Alert.alert('提示', '请先上传食物图片');
       return;
     }
 
+    setAiAnalyzing(true);
+    try {
+      console.log('📸 准备处理图片...');
+      
+      // 创建FormData对象，直接使用图片URI
+      const formDataToSend = new FormData();
+      
+      for (let i = 0; i < formData.images.length; i++) {
+        const imageUri = formData.images[i];
+        console.log(`处理第${i + 1}张图片:`, imageUri);
+        
+        // 在React Native中，需要使用特定的格式
+        const filename = imageUri.split('/').pop() || `image_${i}.jpg`;
+        const match = /\.(\w+)$/.exec(filename);
+        const type = match ? `image/${match[1]}` : 'jpeg';
+        
+        // React Native FormData 需要这种格式
+        const imageFile = {
+          uri: imageUri,
+          type: `image/${type}`,
+          name: filename,
+        };
+        
+        formDataToSend.append('images', imageFile as any);
+        
+        console.log(`✅ 图片${i + 1}已添加到FormData:`, { 
+          uri: imageUri, 
+          type: `image/${type}`, 
+          name: filename 
+        });
+      }
+
+      console.log('🌐 发送AI分析请求...');
+      
+      // 使用analyzeFoodImages方法，传递FormData
+      const analysisResult = await apiClient.analyzeFoodImages(formDataToSend);
+      console.log('🎉 AI分析响应:', analysisResult);
+      
+      // 自动填充分析结果
+      console.log('📝 填充分析结果...');
+      setFormData(prev => ({
+        ...prev,
+        ingredientsText: analysisResult.ingredients_text || prev.ingredientsText,
+        harmfulIngredients: analysisResult.harmful_ingredients || prev.harmfulIngredients,
+        productionDate: analysisResult.production_date || prev.productionDate,
+        shelfLifeValue: analysisResult.shelf_life_value?.toString() || prev.shelfLifeValue,
+        shelfLifeUnit: analysisResult.shelf_life_unit || prev.shelfLifeUnit,
+        expiryDate: analysisResult.expiry_date || prev.expiryDate,
+        caloriesKcal: analysisResult.calories_kcal?.toString() || prev.caloriesKcal,
+        energyOffsetInfo: analysisResult.energy_offset_info || prev.energyOffsetInfo,
+      }));
+
+      console.log('✅ AI分析完成并填充数据');
+      Alert.alert('AI分析完成', '已自动填充识别到的信息，请检查并确认');
+    } catch (error) {
+      console.error('❌ AI分析失败:', error);
+      console.error('错误详情:', JSON.stringify(error, null, 2));
+      
+      let errorMessage = '分析失败，请重试';
+      if (error instanceof Error) {
+        errorMessage = error.message;
+        console.error('错误消息:', error.message);
+        console.error('错误堆栈:', error.stack);
+      }
+      
+      Alert.alert('AI分析失败', errorMessage);
+    } finally {
+      setAiAnalyzing(false);
+      console.log('🏁 AI分析流程结束');
+    }
+  };
+
+  // 处理图片选择
+  const handleImagesSelected = useCallback((images: string[]) => {
+    updateFormData('images', images);
+  }, [updateFormData]);
+
+  // 提交表单
+  const handleSubmit = async () => {
+    if (!validateForm()) return;
     setSaving(true);
 
     try {
-      const updateData: UpdateFoodRequest = {
-        name: formData.name.trim(),
-        description: formData.description.trim(),
-        quantity: parseFloat(formData.quantity),
-        unit: formData.unit.trim(),
-        expiryDate: formData.expiryDate,
-        categoryId: formData.categoryId,
-        locationId: formData.locationId,
-      };
-
-      await apiClient.updateFood(food.id, updateData);
+      const formDataToSend = new FormData();
+      formDataToSend.append('name', formData.name.trim());
+      formDataToSend.append('quantity', formData.quantity);
+      formDataToSend.append('unit', formData.unit.trim());
+      formDataToSend.append('expiry_date', formData.expiryDate);
       
-      Alert.alert(
-        '保存成功',
-        '食物信息已成功更新',
-        [
-          {
-            text: '确定',
-            onPress: () => router.back(),
-          },
-        ]
-      );
+      if (formData.categoryId) {
+        formDataToSend.append('category_id', formData.categoryId.toString());
+      }
+      if (formData.locationId) {
+        formDataToSend.append('location_id', formData.locationId.toString());
+      }
+
+      // 添加可选字段
+      if (formData.productionDate) {
+        formDataToSend.append('production_date', formData.productionDate);
+      }
+      if (formData.shelfLifeValue) {
+        formDataToSend.append('shelf_life_value', formData.shelfLifeValue);
+        formDataToSend.append('shelf_life_unit', formData.shelfLifeUnit);
+      }
+      if (formData.ingredientsText.trim()) {
+        formDataToSend.append('ingredients_text', formData.ingredientsText.trim());
+      }
+      if (formData.harmfulIngredients.length > 0) {
+        formDataToSend.append('harmful_ingredients', JSON.stringify(formData.harmfulIngredients));
+      }
+      if (formData.caloriesKcal) {
+        formDataToSend.append('calories_kcal', formData.caloriesKcal);
+      }
+      if (formData.energyOffsetInfo.trim()) {
+        formDataToSend.append('energy_offset_info', formData.energyOffsetInfo.trim());
+      }
+
+      // 处理图片上传
+      for (const imageUri of formData.images) {
+        const filename = imageUri.split('/').pop() || 'image.jpg';
+        const match = /\.(\w+)$/.exec(filename);
+        const type = match ? `image/${match[1]}` : 'image/jpeg';
+        formDataToSend.append('images', {
+          uri: imageUri,
+          name: filename,
+          type,
+        } as any);
+      }
+
+      await apiClient.updateFood(parseInt(id), formDataToSend as any);
+      Alert.alert('更新成功', '食物信息已更新', [
+        { text: '确定', onPress: () => router.back() }
+      ]);
     } catch (error) {
       console.error('Failed to update food:', error);
-      Alert.alert('保存失败', error instanceof Error ? error.message : '更新食物失败，请重试');
+      Alert.alert('更新失败', error instanceof Error ? error.message : '更新食物失败，请重试');
     } finally {
       setSaving(false);
     }
   };
-
-  const categoryOptions = categories.map(cat => ({ label: cat.name, value: cat.id }));
-  const locationOptions = locations.map(loc => ({ label: loc.name, value: loc.id }));
 
   if (loading) {
     return (
@@ -204,18 +372,38 @@ export default function EditFoodScreen() {
     );
   }
 
-  if (!food) {
+  if (error || !food) {
     return (
       <Layout>
         <SafeAreaView style={styles.container}>
+          <View style={styles.header}>
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() => router.back()}
+            >
+              <Ionicons name="arrow-back" size={24} color={theme.colors.text} />
+            </TouchableOpacity>
+            <Text style={[styles.headerTitle, { color: theme.colors.text }]}>
+              编辑食物
+            </Text>
+          </View>
+          
           <View style={styles.errorContainer}>
-            <Text style={[styles.errorText, { color: theme.colors.error }]}>
-              食物不存在或加载失败
+            <Ionicons
+              name="alert-circle-outline"
+              size={64}
+              color={theme.colors.error}
+            />
+            <Text style={[styles.errorTitle, { color: theme.colors.error }]}>
+              加载失败
+            </Text>
+            <Text style={[styles.errorText, { color: theme.colors.textSecondary }]}>
+              {error || '食物不存在'}
             </Text>
             <Button
-              title="返回"
-              onPress={() => router.back()}
-              style={styles.backButton}
+              title="重试"
+              onPress={fetchFoodDetail}
+              style={styles.retryButton}
             />
           </View>
         </SafeAreaView>
@@ -237,44 +425,34 @@ export default function EditFoodScreen() {
           <Text style={[styles.headerTitle, { color: theme.colors.text }]}>
             编辑食物
           </Text>
-          <View style={styles.placeholder} />
+          <TouchableOpacity
+            style={styles.saveButton}
+            onPress={handleSubmit}
+            disabled={saving}
+          >
+            <Text style={[styles.saveButtonText, { color: theme.colors.primary }]}>
+              {saving ? '保存中...' : '保存'}
+            </Text>
+          </TouchableOpacity>
         </View>
 
         <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-          {/* 图片编辑 */}
+          {/* 食物图片 */}
           <Card style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
-              食物图片
-            </Text>
-            <ImagePicker
-              value={formData.imageUri}
-              onImageSelected={handleImageSelected}
-              onImageRemoved={handleImageRemoved}
-            />
+            <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>食物图片</Text>
+            <MultiImagePicker value={formData.images} onImagesSelected={handleImagesSelected} maxImages={5} />
           </Card>
 
           {/* 基本信息 */}
           <Card style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
-              基本信息
-            </Text>
+            <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>基本信息</Text>
             
             <Input
               label="食物名称"
               value={formData.name}
               onChangeText={(value) => updateFormData('name', value)}
               placeholder="请输入食物名称"
-              required
               error={errors.name}
-            />
-
-            <Input
-              label="描述"
-              value={formData.description}
-              onChangeText={(value) => updateFormData('description', value)}
-              placeholder="请输入食物描述（可选）"
-              multiline
-              numberOfLines={3}
             />
 
             <View style={styles.row}>
@@ -285,7 +463,6 @@ export default function EditFoodScreen() {
                   onChangeText={(value) => updateFormData('quantity', value)}
                   placeholder="请输入数量"
                   keyboardType="numeric"
-                  required
                   error={errors.quantity}
                 />
               </View>
@@ -294,11 +471,81 @@ export default function EditFoodScreen() {
                   label="单位"
                   value={formData.unit}
                   onChangeText={(value) => updateFormData('unit', value)}
-                  placeholder="如：个、kg"
+                  placeholder="个/包/瓶"
                 />
               </View>
             </View>
 
+            <View style={styles.row}>
+              <View style={styles.flex}>
+                <Picker
+                  label="分类"
+                  value={formData.categoryId}
+                  options={categories.map(cat => ({ label: cat.name, value: cat.id }))}
+                  onValueChange={(value) => updateFormData('categoryId', value)}
+                  onAddNew={handleAddCategory}
+                  error={errors.categoryId}
+                />
+              </View>
+              <View style={styles.flex}>
+                <Picker
+                  label="存放位置"
+                  value={formData.locationId}
+                  options={locations.map(loc => ({ label: loc.name, value: loc.id }))}
+                  onValueChange={(value) => updateFormData('locationId', value)}
+                  onAddNew={handleAddLocation}
+                />
+              </View>
+            </View>
+          </Card>
+
+          {/* 详细信息 */}
+          <Card style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>详细信息</Text>
+              <Button
+                title={aiAnalyzing ? '分析中...' : 'AI识别'}
+                onPress={handleAIAnalysis}
+                variant="outline"
+                size="small"
+                loading={aiAnalyzing}
+                disabled={!aiAvailable || formData.images.length === 0}
+                style={styles.aiButton}
+              />
+            </View>
+
+            <Input
+              label="生产日期"
+              value={formData.productionDate}
+              onChangeText={(value) => updateFormData('productionDate', value)}
+              placeholder="YYYY-MM-DD"
+            />
+
+            <View style={styles.row}>
+              <View style={styles.flex}>
+                <Input
+                  label="保质期"
+                  value={formData.shelfLifeValue}
+                  onChangeText={(value) => updateFormData('shelfLifeValue', value)}
+                  placeholder="请输入保质期"
+                  keyboardType="numeric"
+                />
+              </View>
+              <View style={styles.unitContainer}>
+                <Picker
+                  label="单位"
+                  value={formData.shelfLifeUnit}
+                  options={[
+                    { label: '天', value: 'day' },
+                    { label: '月', value: 'month' },
+                    { label: '年', value: 'year' },
+                  ]}
+                  onValueChange={(value) => updateFormData('shelfLifeUnit', value as 'day' | 'month' | 'year')}
+                />
+              </View>
+            </View>
+
+            {/* 到期日期 */}
             <TouchableOpacity
               style={[
                 styles.dateButton,
@@ -314,19 +561,15 @@ export default function EditFoodScreen() {
                   到期日期 <Text style={{ color: theme.colors.error }}>*</Text>
                 </Text>
                 <View style={styles.dateValue}>
-                  <Text style={[
-                    styles.dateText,
-                    {
-                      color: formData.expiryDate ? theme.colors.text : theme.colors.textSecondary,
-                    }
-                  ]}>
+                  <Text
+                    style={[
+                      styles.dateText,
+                      { color: formData.expiryDate ? theme.colors.text : theme.colors.textSecondary }
+                    ]}
+                  >
                     {formData.expiryDate || '请选择到期日期'}
                   </Text>
-                  <Ionicons
-                    name="calendar-outline"
-                    size={20}
-                    color={theme.colors.textSecondary}
-                  />
+                  <Ionicons name="calendar-outline" size={20} color={theme.colors.textSecondary} />
                 </View>
               </View>
             </TouchableOpacity>
@@ -335,47 +578,76 @@ export default function EditFoodScreen() {
                 {errors.expiryDate}
               </Text>
             )}
-          </Card>
 
-          {/* 分类和位置 */}
-          <Card style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
-              分类与位置
-            </Text>
-            
-            <Picker
-              label="分类"
-              value={formData.categoryId}
-              options={categoryOptions}
-              onValueChange={(value) => updateFormData('categoryId', value as number)}
-              placeholder="请选择分类"
+            <Input
+              label="配料表"
+              value={formData.ingredientsText}
+              onChangeText={(value) => updateFormData('ingredientsText', value)}
+              placeholder="请输入或AI识别配料表"
+              multiline
+              numberOfLines={3}
             />
 
-            <Picker
-              label="存放位置"
-              value={formData.locationId}
-              options={locationOptions}
-              onValueChange={(value) => updateFormData('locationId', value as number)}
-              placeholder="请选择存放位置"
+            <Input
+              label="卡路里 (千卡)"
+              value={formData.caloriesKcal}
+              onChangeText={(value) => updateFormData('caloriesKcal', value)}
+              placeholder="每100g热量"
+              keyboardType="numeric"
             />
+
+            <Input
+              label="运动消耗建议"
+              value={formData.energyOffsetInfo}
+              onChangeText={(value) => updateFormData('energyOffsetInfo', value)}
+              placeholder="AI分析的运动建议"
+              multiline
+              numberOfLines={2}
+            />
+
+            {formData.harmfulIngredients.length > 0 && (
+              <View style={styles.harmfulIngredientsContainer}>
+                <Text style={[styles.harmfulTitle, { color: theme.colors.error }]}>
+                  检测到的需要注意的成分：
+                </Text>
+                {formData.harmfulIngredients.map((ingredient, index) => (
+                  <Text key={index} style={[styles.harmfulItem, { color: theme.colors.error }]}>
+                    • {ingredient}
+                  </Text>
+                ))}
+              </View>
+            )}
           </Card>
         </ScrollView>
 
-        {/* 底部按钮 */}
-        <View style={[styles.footer, { backgroundColor: theme.colors.background }]}>
-          <Button
-            title="取消"
-            onPress={() => router.back()}
-            variant="outline"
-            style={styles.footerButton}
-          />
-          <Button
-            title="保存修改"
-            onPress={handleSubmit}
-            loading={saving}
-            style={styles.footerButton}
-          />
-        </View>
+        {/* 模态框 */}
+        <InputModal
+          visible={showDateModal}
+          title="选择到期日期"
+          message="请输入到期日期，格式：YYYY-MM-DD"
+          placeholder="2025-12-31"
+          defaultValue={formData.expiryDate}
+          onConfirm={handleDateConfirm}
+          onCancel={() => setShowDateModal(false)}
+        />
+
+        <InputModal
+          visible={showCategoryModal}
+          title="添加新分类"
+          message="请输入新的分类名称"
+          placeholder="例如：蔬菜、水果"
+          onConfirm={handleCategoryConfirm}
+          onCancel={() => setShowCategoryModal(false)}
+        />
+
+        <InputModal
+          visible={showLocationModal}
+          title="添加新位置"
+          message="请输入新的存放位置"
+          placeholder="例如：冰箱、橱柜"
+          onConfirm={handleLocationConfirm}
+          onCancel={() => setShowLocationModal(false)}
+        />
       </SafeAreaView>
     </Layout>
   );
@@ -404,8 +676,12 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginHorizontal: 16,
   },
-  placeholder: {
-    width: 32,
+  saveButton: {
+    padding: 4,
+  },
+  saveButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
   },
   content: {
     flex: 1,
@@ -413,12 +689,19 @@ const styles = StyleSheet.create({
   },
   section: {
     marginBottom: 16,
-    padding: 16,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: '600',
-    marginBottom: 16,
+  },
+  aiButton: {
+    marginLeft: 8,
   },
   row: {
     flexDirection: 'row',
@@ -431,45 +714,65 @@ const styles = StyleSheet.create({
     width: 100,
   },
   dateButton: {
-    borderRadius: 12,
     borderWidth: 1,
-    padding: 16,
-    marginVertical: 8,
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 8,
   },
   dateButtonContent: {
-    gap: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   dateLabel: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '500',
   },
   dateValue: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    gap: 8,
   },
   dateText: {
     fontSize: 16,
   },
   errorText: {
-    fontSize: 14,
+    fontSize: 12,
     marginTop: 4,
   },
-  footer: {
-    flexDirection: 'row',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    gap: 12,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(0, 0, 0, 0.1)',
+  harmfulIngredientsContainer: {
+    marginTop: 12,
+    padding: 12,
+    backgroundColor: '#FFF3E0',
+    borderRadius: 8,
   },
-  footerButton: {
-    flex: 1,
+  harmfulTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  harmfulItem: {
+    fontSize: 12,
+    marginBottom: 4,
   },
   errorContainer: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    paddingHorizontal: 32,
+  },
+  errorTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  errorText: {
+    fontSize: 16,
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  retryButton: {
     paddingHorizontal: 32,
   },
 });

@@ -132,18 +132,12 @@ export default function AddFoodScreen() {
 
   // AI分析图片
   const handleAIAnalysis = async () => {
-    console.log('🤖 开始AI分析...');
-    console.log('AI可用状态:', aiAvailable);
-    console.log('图片数量:', formData.images.length);
-    
     if (!aiAvailable) {
-      console.log('❌ AI分析服务不可用');
       Alert.alert('提示', 'AI分析服务暂时不可用');
       return;
     }
 
     if (formData.images.length === 0) {
-      console.log('❌ 没有上传图片');
       Alert.alert('提示', '请先上传食物图片');
       return;
     }
@@ -151,66 +145,39 @@ export default function AddFoodScreen() {
     setAiAnalyzing(true);
     
     try {
-      console.log('📸 准备处理图片...');
-      
-      // 创建FormData对象，直接使用图片URI
-      const formDataToSend = new FormData();
-      
-      for (let i = 0; i < formData.images.length; i++) {
-        const imageUri = formData.images[i];
-        console.log(`处理第${i + 1}张图片:`, imageUri);
-        
-        // 在React Native中，直接使用URI创建文件对象
-        const filename = imageUri.split('/').pop() || `image_${i}.jpg`;
-        const match = /\.(\w+)$/.exec(filename);
-        const type = match ? `image/${match[1]}` : 'image/jpeg';
-        
-        formDataToSend.append('images', {
-          uri: imageUri,
-          name: filename,
-          type,
-        } as any);
-        
-        console.log(`✅ 图片${i + 1}已添加到FormData:`, { filename, type });
+      // 将图片URI转换为File对象（这里需要处理React Native的特殊情况）
+      const imageFiles: File[] = [];
+      for (const imageUri of formData.images) {
+        // 在React Native中，我们需要创建一个FormData兼容的对象
+        const response = await fetch(imageUri);
+        const blob = await response.blob();
+        const file = new File([blob], 'image.jpg', { type: 'image/jpeg' });
+        imageFiles.push(file);
       }
 
-      console.log('🌐 发送AI分析请求...');
-      
-      // 使用analyzeFoodImages方法，传递FormData
-      const analysisResult = await apiClient.analyzeFoodImages(formDataToSend);
-      console.log('🎉 AI分析响应:', analysisResult);
+      const analysisResult = await apiClient.analyzeFoodImages(imageFiles);
       
       // 自动填充分析结果
-      console.log('📝 填充分析结果...');
       setFormData(prev => ({
         ...prev,
-        ingredientsText: analysisResult.ingredients_text || prev.ingredientsText,
-        harmfulIngredients: analysisResult.harmful_ingredients || prev.harmfulIngredients,
+        ingredientsText: analysisResult.ingredients?.join(', ') || prev.ingredientsText,
+        harmfulIngredients: analysisResult.potential_concerns?.items || prev.harmfulIngredients,
         productionDate: analysisResult.production_date || prev.productionDate,
-        shelfLifeValue: analysisResult.shelf_life_value?.toString() || prev.shelfLifeValue,
-        shelfLifeUnit: analysisResult.shelf_life_unit || prev.shelfLifeUnit,
-        expiryDate: analysisResult.expiry_date || prev.expiryDate,
+        shelfLifeValue: analysisResult.shelf_life?.match(/\d+/)?.[0] || prev.shelfLifeValue,
+        shelfLifeUnit: analysisResult.shelf_life?.includes('年') ? 'year' : 
+                      analysisResult.shelf_life?.includes('月') ? 'month' : 
+                      analysisResult.shelf_life?.includes('天') ? 'day' : prev.shelfLifeUnit,
+        expiryDate: analysisResult.expiration_date || prev.expiryDate,
         caloriesKcal: analysisResult.calories_kcal?.toString() || prev.caloriesKcal,
         energyOffsetInfo: analysisResult.energy_offset_info || prev.energyOffsetInfo,
       }));
 
-      console.log('✅ AI分析完成并填充数据');
       Alert.alert('AI分析完成', '已自动填充识别到的信息，请检查并确认');
     } catch (error) {
-      console.error('❌ AI分析失败:', error);
-      console.error('错误详情:', JSON.stringify(error, null, 2));
-      
-      let errorMessage = '分析失败，请重试';
-      if (error instanceof Error) {
-        errorMessage = error.message;
-        console.error('错误消息:', error.message);
-        console.error('错误堆栈:', error.stack);
-      }
-      
-      Alert.alert('AI分析失败', errorMessage);
+      console.error('AI analysis failed:', error);
+      Alert.alert('AI分析失败', error instanceof Error ? error.message : '分析失败，请重试');
     } finally {
       setAiAnalyzing(false);
-      console.log('🏁 AI分析流程结束');
     }
   };
 
@@ -440,7 +407,42 @@ export default function AddFoodScreen() {
               </View>
             </View>
 
-            
+            <TouchableOpacity
+              style={[
+                styles.dateButton,
+                {
+                  backgroundColor: theme.colors.surface,
+                  borderColor: errors.expiryDate ? theme.colors.error : theme.colors.border,
+                }
+              ]}
+              onPress={handleDatePress}
+            >
+              <View style={styles.dateButtonContent}>
+                <Text style={[styles.dateLabel, { color: theme.colors.text }]}>
+                  到期日期 <Text style={{ color: theme.colors.error }}>*</Text>
+                </Text>
+                <View style={styles.dateValue}>
+                  <Text style={[
+                    styles.dateText,
+                    {
+                      color: formData.expiryDate ? theme.colors.text : theme.colors.textSecondary,
+                    }
+                  ]}>
+                    {formData.expiryDate || '请选择到期日期'}
+                  </Text>
+                  <Ionicons
+                    name="calendar-outline"
+                    size={20}
+                    color={theme.colors.textSecondary}
+                  />
+                </View>
+              </View>
+            </TouchableOpacity>
+            {errors.expiryDate && (
+              <Text style={[styles.errorText, { color: theme.colors.error }]}>
+                {errors.expiryDate}
+              </Text>
+            )}
           </Card>
 
           {/* 分类和位置 */}
@@ -518,51 +520,14 @@ export default function AddFoodScreen() {
               </View>
             </View>
 
-                         <TouchableOpacity
-               style={[
-                 styles.dateButton,
-                 {
-                   backgroundColor: theme.colors.surface,
-                   borderColor: errors.expiryDate ? theme.colors.error : theme.colors.border,
-                 }
-               ]}
-               onPress={handleDatePress}
-             >
-               <View style={styles.dateButtonContent}>
-                 <Text style={[styles.dateLabel, { color: theme.colors.text }]}>
-                   到期日期 <Text style={{ color: theme.colors.error }}>*</Text>
-                 </Text>
-                 <View style={styles.dateValue}>
-                   <Text style={[
-                     styles.dateText,
-                     {
-                       color: formData.expiryDate ? theme.colors.text : theme.colors.textSecondary,
-                     }
-                   ]}>
-                     {formData.expiryDate || '请选择到期日期'}
-                   </Text>
-                   <Ionicons
-                     name="calendar-outline"
-                     size={20}
-                     color={theme.colors.textSecondary}
-                   />
-                 </View>
-               </View>
-             </TouchableOpacity>
-             {errors.expiryDate && (
-               <Text style={[styles.errorText, { color: theme.colors.error }]}>
-                 {errors.expiryDate}
-               </Text>
-             )}
-
-             <Input
-               label="配料表"
-               value={formData.ingredientsText}
-               onChangeText={(value) => updateFormData('ingredientsText', value)}
-               placeholder="请输入或AI识别配料表"
-               multiline
-               numberOfLines={3}
-             />
+            <Input
+              label="配料表"
+              value={formData.ingredientsText}
+              onChangeText={(value) => updateFormData('ingredientsText', value)}
+              placeholder="请输入或AI识别配料表"
+              multiline
+              numberOfLines={3}
+            />
 
             <Input
               label="卡路里 (千卡)"

@@ -380,10 +380,10 @@ export type Partial<T> = { [P in keyof T]?: T[P] };
 export type Required<T> = { [P in keyof T]-?: T[P] };
 
 // 创建类型（去除id和时间戳）
-export type CreateType<T> = Omit<T, keyof { id: any; created_at: any; updated_at: any }>;
+export type CreateType<T> = Omit<T, 'id' | 'created_at' | 'updated_at'>;
 
 // 更新类型（所有字段可选，去除id和时间戳）
-export type UpdateType<T> = Partial<Omit<T, keyof { id: any; created_at: any; updated_at: any }>>;
+export type UpdateType<T> = Partial<Omit<T, 'id' | 'created_at' | 'updated_at'>>;
 
 // ============= 常量类型 =============
 

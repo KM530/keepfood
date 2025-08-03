@@ -228,7 +228,7 @@ def get_file_url(filename: str, folder: str = 'uploads') -> str:
     
     # 这里应该根据实际的静态文件服务配置来生成URL
     # 如果使用CDN，应该返回CDN的URL
-    base_url = current_app.config.get('STATIC_URL', '/static')
+    base_url = current_app.config.get('STATIC_URL', '/static/uploads')
     return f"{base_url}/{folder}/{filename}"
 
 

@@ -6,6 +6,7 @@ AI食物分析服务
 import os
 import json
 import logging
+import requests
 from datetime import datetime, timedelta
 from typing import List, Dict, Any, Optional, Tuple
 from PIL import Image
@@ -20,11 +21,17 @@ class AIFoodAnalysisService:
     
     def __init__(self):
         self.api_key = os.getenv('GOOGLE_API_KEY')
+        self.model = None
+        
         if not self.api_key:
             logger.warning("GOOGLE_API_KEY not found in environment variables")
             return
         
         try:
+            # 配置代理设置
+            self._setup_proxy()
+            
+            # 配置Gemini API
             genai.configure(api_key=self.api_key)
             self.model = genai.GenerativeModel('gemini-1.5-flash-latest')
             logger.info("AI Analysis Service initialized successfully")
@@ -32,9 +39,49 @@ class AIFoodAnalysisService:
             logger.error(f"Failed to initialize AI Analysis Service: {e}")
             self.model = None
     
+    def _setup_proxy(self):
+        """配置代理设置"""
+        proxy_host = os.getenv('PROXY_HOST', '127.0.0.1')
+        proxy_port = os.getenv('PROXY_PORT', '7890')
+        
+        if proxy_host and proxy_port:
+            proxy_url = f"http://{proxy_host}:{proxy_port}"
+            logger.info(f"🌐 配置代理: {proxy_url}")
+            
+            # 设置环境变量，让requests库使用代理
+            os.environ['HTTP_PROXY'] = proxy_url
+            os.environ['HTTPS_PROXY'] = proxy_url
+            
+            # 也可以通过requests的Session来配置
+            session = requests.Session()
+            session.proxies = {
+                'http': proxy_url,
+                'https': proxy_url
+            }
+            
+            # 为google-generativeai配置代理
+            # 这个库内部使用requests，所以环境变量设置应该生效
+            logger.info(f"✅ 代理配置完成: {proxy_url}")
+        else:
+            logger.info("🚫 未配置代理，使用直连")
+    
     def is_available(self) -> bool:
         """检查AI服务是否可用"""
         return self.model is not None and self.api_key is not None
+    
+    def _ensure_proxy_settings(self):
+        """确保代理设置生效"""
+        proxy_host = os.getenv('PROXY_HOST', '127.0.0.1')
+        proxy_port = os.getenv('PROXY_PORT', '7890')
+        
+        if proxy_host and proxy_port:
+            proxy_url = f"http://{proxy_host}:{proxy_port}"
+            
+            # 重新设置环境变量（以防被覆盖）
+            os.environ['HTTP_PROXY'] = proxy_url
+            os.environ['HTTPS_PROXY'] = proxy_url
+            
+            logger.debug(f"🔄 重新确认代理设置: {proxy_url}")
     
     def analyze_food_images(self, image_paths: List[str]) -> Dict[str, Any]:
         """
@@ -53,6 +100,9 @@ class AIFoodAnalysisService:
             raise ValueError("No images provided for analysis")
         
         try:
+            # 确保代理设置在每次调用时都生效
+            self._ensure_proxy_settings()
+            
             # 加载图片
             images = []
             for path in image_paths:
@@ -70,18 +120,21 @@ class AIFoodAnalysisService:
             prompt = self._build_analysis_prompt()
             
             # 发送请求到Gemini API
-            logger.info(f"Analyzing {len(images)} images with Gemini API")
+            logger.info(f"🚀 通过代理发送分析请求，处理{len(images)}张图片")
+            logger.info(f"🌐 当前代理设置: HTTP_PROXY={os.environ.get('HTTP_PROXY', 'None')}")
+            
             content = [prompt] + images
             response = self.model.generate_content(content)
             
             # 解析响应
             result = self._parse_response(response.text)
-            logger.info("AI analysis completed successfully")
+            logger.info("✅ AI分析完成")
             
             return result
             
         except Exception as e:
-            logger.error(f"AI analysis failed: {e}")
+            logger.error(f"❌ AI分析失败: {str(e)}")
+            logger.error(f"错误类型: {type(e).__name__}")
             raise
     
     def _build_analysis_prompt(self) -> str:

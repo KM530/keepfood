@@ -409,7 +409,7 @@ class APIClientImpl implements APIClient {
     return response.body;
   }
 
-  async updateFood(id: number, data: UpdateFoodRequest): Promise<Partial<Food>> {
+  async updateFood(id: number, data: UpdateFoodRequest | FormData): Promise<Partial<Food>> {
     const response = await this.http.put(`/foods/${id}`, data);
     return response.body;
   }
@@ -473,13 +473,24 @@ class APIClientImpl implements APIClient {
     return response.body;
   }
 
-  async analyzeFoodImages(images: File[]): Promise<AIFoodAnalysisResponse> {
-    const formData = new FormData();
-    images.forEach((image, index) => {
-      formData.append('images', image);
-    });
+  async analyzeFoodImages(images: File[] | FormData): Promise<AIFoodAnalysisResponse> {
+    let formData: FormData;
     
-    const response = await this.http.post('/ai/analyze-food', formData);
+    if (images instanceof FormData) {
+      // 如果传入的已经是FormData，直接使用
+      formData = images;
+    } else {
+      // 如果传入的是File数组，创建FormData
+      formData = new FormData();
+      images.forEach((image, index) => {
+        formData.append('images', image);
+      });
+    }
+    
+    // AI分析需要更长的超时时间（3分钟）
+    const response = await this.http.post('/ai/analyze-food', formData, {
+      timeout: 180000 // 3分钟超时
+    });
     return response.body;
   }
 
@@ -509,7 +520,7 @@ class APIClientImpl implements APIClient {
 const API_CONFIG: APIClientConfig = {
   // baseURL: __DEV__ ? 'http://localhost:5000/api' : 'https://api.foodmanager.com/api',
   baseURL: __DEV__ ? 'http://192.168.31.248:5000/api' : 'https://api.foodmanager.com/api',
-  timeout: 10000,
+  timeout: 120000, // 2分钟超时，适应AI分析的长时间处理
   headers: {
     'Accept': 'application/json',
   },

@@ -18,6 +18,7 @@ export default function FoodDetailScreen() {
   const [food, setFood] = useState<Food | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   // 获取食物详情
   const fetchFoodDetail = useCallback(async () => {
@@ -40,6 +41,30 @@ export default function FoodDetailScreen() {
   useEffect(() => {
     fetchFoodDetail();
   }, [fetchFoodDetail]);
+
+  // 测试图片URL可访问性
+  const testImageUrl = async (url: string) => {
+    try {
+      console.log('🧪 测试图片URL可访问性:', url);
+      const response = await fetch(url, { method: 'HEAD' });
+      console.log('📊 图片URL响应状态:', response.status);
+      return response.ok;
+    } catch (error) {
+      console.error('❌ 图片URL测试失败:', error);
+      return false;
+    }
+  };
+
+  // 当食物数据加载完成后，测试图片URL
+  useEffect(() => {
+    if (food && food.image_url) {
+      const urls = Array.isArray(food.image_url) ? food.image_url : [food.image_url];
+      urls.forEach(async (imageUrl) => {
+        const fullUrl = getImageUrl(imageUrl);
+        await testImageUrl(fullUrl);
+      });
+    }
+  }, [food]);
 
   // 编辑食物
   const handleEdit = useCallback(() => {
@@ -127,6 +152,24 @@ export default function FoodDetailScreen() {
     return colors[status];
   };
 
+  // 处理图片URL
+  const getImageUrl = (filename: string | undefined) => {
+    if (!filename) return '';
+    if (filename.startsWith('http')) {
+      return filename;
+    }
+    // 数据库存储的是文件名，需要构建完整的URL路径
+    return `http://192.168.31.248:5000/${filename}`;
+  };
+
+  // 处理图片滚动
+  const handleImageScroll = (event: any) => {
+    const contentOffset = event.nativeEvent.contentOffset.x;
+    const imageWidth = event.nativeEvent.layoutMeasurement.width;
+    const index = Math.round(contentOffset / imageWidth);
+    setCurrentImageIndex(index);
+  };
+
   if (loading) {
     return (
       <Layout>
@@ -175,6 +218,7 @@ export default function FoodDetailScreen() {
   }
 
   const statusInfo = getStatusInfo(food);
+  const imageUrls = Array.isArray(food.image_url) ? food.image_url : [food.image_url];
 
   return (
     <Layout>
@@ -199,14 +243,42 @@ export default function FoodDetailScreen() {
         </View>
 
         <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-          {/* 食物图片 */}
-          {food.image_url && (
+          {/* 食物图片轮播 */}
+          {food.image_url && food.image_url.length > 0 && (
             <View style={styles.imageContainer}>
-              <Image
-                source={{ uri: food.image_url }}
-                style={styles.foodImage}
-                resizeMode="cover"
-              />
+              <ScrollView
+                horizontal
+                pagingEnabled
+                showsHorizontalScrollIndicator={false}
+                style={styles.imageScrollView}
+                onScroll={handleImageScroll}
+                scrollEventThrottle={16}
+              >
+                {imageUrls.map((imageUrl, index) => (
+                  <View key={index} style={styles.imageWrapper}>
+                    <Image
+                      source={{ uri: getImageUrl(imageUrl) }}
+                      style={styles.foodImage}
+                      resizeMode="cover"
+                    />
+                  </View>
+                ))}
+              </ScrollView>
+              
+              {/* 图片指示器 */}
+              {imageUrls.length > 1 && (
+                <View style={styles.imageIndicator}>
+                  {imageUrls.map((_, index) => (
+                    <View
+                      key={index}
+                      style={[
+                        styles.indicatorDot,
+                        { backgroundColor: index === currentImageIndex ? '#007AFF' : '#C7C7CC' }
+                      ]}
+                    />
+                  ))}
+                </View>
+              )}
             </View>
           )}
 
@@ -283,71 +355,103 @@ export default function FoodDetailScreen() {
             </View>
           </Card>
 
-          {/* 营养信息 */}
-          {food.nutritionInfo && (
-            <Card style={styles.nutritionCard}>
-              <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
-                营养信息
-              </Text>
-              <View style={styles.nutritionGrid}>
-                {food.nutritionInfo.calories && (
-                  <View style={styles.nutritionItem}>
-                    <Text style={[styles.nutritionValue, { color: theme.colors.text }]}>
-                      {food.nutritionInfo.calories}
-                    </Text>
-                    <Text style={[styles.nutritionLabel, { color: theme.colors.textSecondary }]}>
-                      卡路里
-                    </Text>
-                  </View>
-                )}
-                {food.nutritionInfo.protein && (
-                  <View style={styles.nutritionItem}>
-                    <Text style={[styles.nutritionValue, { color: theme.colors.text }]}>
-                      {food.nutritionInfo.protein}g
-                    </Text>
-                    <Text style={[styles.nutritionLabel, { color: theme.colors.textSecondary }]}>
-                      蛋白质
-                    </Text>
-                  </View>
-                )}
-                {food.nutritionInfo.carbs && (
-                  <View style={styles.nutritionItem}>
-                    <Text style={[styles.nutritionValue, { color: theme.colors.text }]}>
-                      {food.nutritionInfo.carbs}g
-                    </Text>
-                    <Text style={[styles.nutritionLabel, { color: theme.colors.textSecondary }]}>
-                      碳水化合物
-                    </Text>
-                  </View>
-                )}
-                {food.nutritionInfo.fat && (
-                  <View style={styles.nutritionItem}>
-                    <Text style={[styles.nutritionValue, { color: theme.colors.text }]}>
-                      {food.nutritionInfo.fat}g
-                    </Text>
-                    <Text style={[styles.nutritionLabel, { color: theme.colors.textSecondary }]}>
-                      脂肪
-                    </Text>
-                  </View>
-                )}
-              </View>
-            </Card>
-          )}
+                     {/* 详细信息 */}
+           <Card style={styles.detailCard}>
+             <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
+               详细信息
+             </Text>
+             
+             {/* 生产日期 */}
+             {food.production_date && (
+               <View style={styles.detailRow}>
+                 <View style={styles.detailItem}>
+                   <Ionicons name="calendar-outline" size={20} color={theme.colors.textSecondary} />
+                   <Text style={[styles.detailLabel, { color: theme.colors.textSecondary }]}>
+                     生产日期
+                   </Text>
+                   <Text style={[styles.detailValue, { color: theme.colors.text }]}>
+                     {formatDate(food.production_date)}
+                   </Text>
+                 </View>
+               </View>
+             )}
 
-          {/* 有害成分警告 */}
-          {food.harmfulIngredients && food.harmfulIngredients.length > 0 && (
-            <Card style={[styles.warningCard, { backgroundColor: '#FFF3E0' }]}>
-              <View style={styles.warningHeader}>
-                <Ionicons name="warning" size={20} color="#F57C00" />
-                <Text style={[styles.warningTitle, { color: '#F57C00' }]}>
-                  有害成分提醒
-                </Text>
-              </View>
-              <Text style={[styles.warningText, { color: '#E65100' }]}>
-                {food.harmfulIngredients.join('、')}
-              </Text>
-            </Card>
-          )}
+             {/* 保质期 */}
+             {food.shelf_life_value && food.shelf_life_unit && (
+               <View style={styles.detailRow}>
+                 <View style={styles.detailItem}>
+                   <Ionicons name="time-outline" size={20} color={theme.colors.textSecondary} />
+                   <Text style={[styles.detailLabel, { color: theme.colors.textSecondary }]}>
+                     保质期
+                   </Text>
+                   <Text style={[styles.detailValue, { color: theme.colors.text }]}>
+                     {food.shelf_life_value} {food.shelf_life_unit === 'day' ? '天' : 
+                      food.shelf_life_unit === 'month' ? '月' : '年'}
+                   </Text>
+                 </View>
+               </View>
+             )}
+
+             {/* 配料表 */}
+             {food.ingredients_text && (
+               <View style={styles.detailRow}>
+                 <View style={styles.detailItem}>
+                   <Ionicons name="list-outline" size={20} color={theme.colors.textSecondary} />
+                   <Text style={[styles.detailLabel, { color: theme.colors.textSecondary }]}>
+                     配料表
+                   </Text>
+                   <Text style={[styles.detailValue, { color: theme.colors.text }]}>
+                     {food.ingredients_text}
+                   </Text>
+                 </View>
+               </View>
+             )}
+
+             {/* 卡路里 */}
+             {food.calories_kcal && (
+               <View style={styles.detailRow}>
+                 <View style={styles.detailItem}>
+                   <Ionicons name="flame-outline" size={20} color={theme.colors.textSecondary} />
+                   <Text style={[styles.detailLabel, { color: theme.colors.textSecondary }]}>
+                     卡路里
+                   </Text>
+                   <Text style={[styles.detailValue, { color: theme.colors.text }]}>
+                     {food.calories_kcal} 千卡
+                   </Text>
+                 </View>
+               </View>
+             )}
+
+             {/* 运动消耗建议 */}
+             {food.energy_offset_info && (
+               <View style={styles.detailRow}>
+                 <View style={styles.detailItem}>
+                   <Ionicons name="fitness-outline" size={20} color={theme.colors.textSecondary} />
+                   <Text style={[styles.detailLabel, { color: theme.colors.textSecondary }]}>
+                     运动建议
+                   </Text>
+                   <Text style={[styles.detailValue, { color: theme.colors.text }]}>
+                     {food.energy_offset_info}
+                   </Text>
+                 </View>
+               </View>
+             )}
+           </Card>
+
+           {/* 有害成分警告 */}
+           {food.harmful_ingredients_json && food.harmful_ingredients_json.length > 0 && (
+             <Card style={StyleSheet.flatten([styles.warningCard, { backgroundColor: '#FFF3E0' }])}>
+               <View style={styles.warningHeader}>
+                 <Ionicons name="warning" size={20} color="#F57C00" />
+                 <Text style={[styles.warningTitle, { color: '#F57C00' }]}>
+                   有害成分提醒
+                 </Text>
+               </View>
+               <Text style={[styles.warningText, { color: '#E65100' }]}>
+                 {food.harmful_ingredients_json.join('、')}
+               </Text>
+             </Card>
+           )}
 
           {/* 时间信息 */}
           <Card style={styles.timeCard}>
@@ -380,13 +484,13 @@ export default function FoodDetailScreen() {
           <Button
             title="消费"
             onPress={handleConsume}
-            style={[styles.actionButton, { backgroundColor: theme.colors.primary }]}
+            style={StyleSheet.flatten([styles.actionButton, { backgroundColor: theme.colors.primary }])}
             disabled={food.quantity <= 0}
           />
           <Button
             title="删除"
             onPress={handleDelete}
-            style={[styles.actionButton, styles.deleteButton]}
+            style={StyleSheet.flatten([styles.actionButton, styles.deleteButton])}
             variant="outline"
           />
         </View>
@@ -430,9 +534,28 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     overflow: 'hidden',
   },
+  imageScrollView: {
+    height: 200,
+  },
+  imageWrapper: {
+    width: '100%',
+    height: 200,
+  },
   foodImage: {
     width: '100%',
     height: 200,
+  },
+  imageIndicator: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 8,
+    gap: 8,
+  },
+  indicatorDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
   },
   infoCard: {
     marginBottom: 16,
@@ -484,7 +607,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
-  nutritionCard: {
+  detailCard: {
     marginBottom: 16,
     padding: 16,
   },

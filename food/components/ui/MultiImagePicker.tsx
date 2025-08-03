@@ -37,8 +37,7 @@ export function MultiImagePicker({
       // 启动图片选择器
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [4, 3],
+        allowsEditing: false, // 不进行裁切
         quality: 0.8,
       });
 
@@ -69,8 +68,7 @@ export function MultiImagePicker({
 
       // 启动相机
       const result = await ImagePicker.launchCameraAsync({
-        allowsEditing: true,
-        aspect: [4, 3],
+        allowsEditing: false, // 不进行裁切
         quality: 0.8,
       });
 
