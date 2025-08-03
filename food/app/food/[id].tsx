@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Image } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Image, Dimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -19,6 +19,8 @@ export default function FoodDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [imageLoadErrors, setImageLoadErrors] = useState<Set<string>>(new Set());
+  const screenWidth = Dimensions.get('window').width;
 
   // 获取食物详情
   const fetchFoodDetail = useCallback(async () => {
@@ -538,7 +540,7 @@ const styles = StyleSheet.create({
     height: 200,
   },
   imageWrapper: {
-    width: '100%',
+    width: Dimensions.get('window').width - 32, // 屏幕宽度减去padding
     height: 200,
   },
   foodImage: {
