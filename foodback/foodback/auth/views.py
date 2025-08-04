@@ -195,6 +195,7 @@ def update_profile():
         # 更新用户信息
         update_data = {
             'nickname': form.nickname.data,
+            'email': form.email.data if form.email.data else None,
             'phone': form.phone.data if form.phone.data else None,
         }
 

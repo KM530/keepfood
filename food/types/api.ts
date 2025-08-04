@@ -14,6 +14,7 @@ import type {
   AuthResponse,
   LoginRequest,
   RegisterRequest,
+  ChangePasswordRequest,
   CreateFoodRequest,
   UpdateFoodRequest,
   ConsumeFoodRequest,
@@ -38,6 +39,7 @@ export interface APIClient {
   // 用户相关
   getCurrentUser(): Promise<User>;
   updateUser(data: FormData): Promise<Partial<User>>;
+  changePassword(data: ChangePasswordRequest): Promise<void>;
   
   // 食物相关
   getFoods(params?: GetFoodsParams): Promise<PaginatedResponse<FoodListItem>>;
@@ -59,6 +61,7 @@ export interface APIClient {
   getShoppingList(): Promise<ShoppingListItem[]>;
   addShoppingItem(data: CreateShoppingItemRequest): Promise<ShoppingListItem>;
   updateShoppingList(data: UpdateShoppingListRequest): Promise<void>;
+  deleteShoppingItem(id: number): Promise<void>;
   
   // AI功能相关
   recognizeIngredients(image: File): Promise<OCRIngredientsResponse>;
@@ -154,6 +157,10 @@ export interface ServerError extends Error {
   status: 500;
 }
 
+export interface ParseError extends Error {
+  code: 'PARSE_ERROR';
+}
+
 export type APIError = 
   | NetworkError 
   | TimeoutError 
@@ -161,7 +168,8 @@ export type APIError =
   | AuthenticationError 
   | AuthorizationError 
   | NotFoundError 
-  | ServerError;
+  | ServerError
+  | ParseError;
 
 // ============= API 端点常量 =============
 

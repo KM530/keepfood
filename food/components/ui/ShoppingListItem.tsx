@@ -24,7 +24,7 @@ export function ShoppingListItem({
   const { theme } = useTheme();
 
   const handleToggle = () => {
-    onToggle(item.id, !item.completed);
+    onToggle(item.id, !item.is_checked);
   };
 
   const handleSelect = () => {
@@ -65,9 +65,9 @@ export function ShoppingListItem({
         onPress={handleToggle}
       >
         <Ionicons
-          name={item.completed ? 'checkmark-circle' : 'ellipse-outline'}
+          name={item.is_checked ? 'checkmark-circle' : 'ellipse-outline'}
           size={24}
-          color={item.completed ? '#4CAF50' : theme.colors.textSecondary}
+          color={item.is_checked ? '#4CAF50' : theme.colors.textSecondary}
         />
       </TouchableOpacity>
 
@@ -81,19 +81,19 @@ export function ShoppingListItem({
           <Text style={[
             styles.itemName,
             {
-              color: item.completed ? theme.colors.textSecondary : theme.colors.text,
-              textDecorationLine: item.completed ? 'line-through' : 'none',
+              color: item.is_checked ? theme.colors.textSecondary : theme.colors.text,
+              textDecorationLine: item.is_checked ? 'line-through' : 'none',
             }
           ]}>
-            {item.name}
+            {item.item_name}
           </Text>
           
           {item.quantity && (
             <Text style={[
               styles.itemQuantity,
               {
-                color: item.completed ? theme.colors.textSecondary : theme.colors.textSecondary,
-                textDecorationLine: item.completed ? 'line-through' : 'none',
+                color: item.is_checked ? theme.colors.textSecondary : theme.colors.textSecondary,
+                textDecorationLine: item.is_checked ? 'line-through' : 'none',
               }
             ]}>
               {item.quantity}{item.unit ? ` ${item.unit}` : ''}
@@ -105,7 +105,7 @@ export function ShoppingListItem({
               styles.itemNote,
               {
                 color: theme.colors.textSecondary,
-                textDecorationLine: item.completed ? 'line-through' : 'none',
+                textDecorationLine: item.is_checked ? 'line-through' : 'none',
               }
             ]}>
               {item.note}

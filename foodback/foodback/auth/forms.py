@@ -111,6 +111,15 @@ class UpdateProfileForm(FlaskForm):
         ]
     )
     
+    email = EmailField(
+        '邮箱',
+        validators=[
+            Email(message='请输入有效的邮箱地址'),
+            Length(max=100, message='邮箱长度不能超过100个字符')
+        ],
+        render_kw={'placeholder': '请输入邮箱（可选）'}
+    )
+    
     phone = StringField(
         '手机号',
         validators=[
@@ -128,6 +137,12 @@ class UpdateProfileForm(FlaskForm):
         if field.data != self.current_user.nickname:
             if User.query.filter_by(nickname=field.data).first():
                 raise ValidationError('该昵称已被使用')
+
+    def validate_email(self, field):
+        """验证邮箱是否已被其他用户使用"""
+        if field.data and field.data != self.current_user.email:
+            if User.query.filter_by(email=field.data).first():
+                raise ValidationError('该邮箱已被注册')
 
     def validate_phone(self, field):
         """验证手机号是否已被其他用户使用"""

@@ -5,15 +5,16 @@ import type {
   APIClient,
   HTTPClient,
   APIRequestConfig,
-  APIResponse,
   APIError,
   RequestInterceptor,
   ResponseInterceptor,
   APIClientConfig,
+  GetFoodsParams,
 } from '@/types/api';
 import type {
   LoginRequest,
   RegisterRequest,
+  ChangePasswordRequest,
   AuthResponse,
   User,
   Food,
@@ -34,7 +35,7 @@ import type {
   RegisterPushTokenRequest,
   NotificationSettings,
   PaginatedResponse,
-  GetFoodsParams,
+  APIResponse,
   AIFoodAnalysisResponse,
 } from '@/types';
 
@@ -161,6 +162,8 @@ class HTTPClientImpl implements HTTPClient {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), processedConfig.timeout || this.timeout);
 
+      console.log(`[API] Making ${processedConfig.method} request to: ${url}`);
+      
       const response = await fetch(url, {
         method: processedConfig.method,
         headers,
@@ -170,8 +173,59 @@ class HTTPClientImpl implements HTTPClient {
 
       clearTimeout(timeoutId);
 
+      console.log(`[API] Response status: ${response.status} ${response.statusText}`);
+
+      // 检查响应状态
+      if (!response.ok) {
+        // 尝试解析错误响应
+        let errorData;
+        try {
+          const errorText = await response.text();
+          console.log(`[API] Error response body: ${errorText}`);
+          
+          // 尝试解析为JSON
+          try {
+            errorData = JSON.parse(errorText);
+          } catch (parseError) {
+            // 如果不是JSON，创建一个错误对象
+            errorData = {
+              code: response.status,
+              message: `HTTP ${response.status}: ${response.statusText}`,
+              body: errorText
+            };
+          }
+        } catch (textError) {
+          errorData = {
+            code: response.status,
+            message: `HTTP ${response.status}: ${response.statusText}`,
+            body: 'Unable to read response body'
+          };
+        }
+        
+        throw this.createAPIError(errorData, response.status);
+      }
+
+      // 检查Content-Type
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        console.warn(`[API] Unexpected content-type: ${contentType}`);
+      }
+
       // 解析响应
-      const responseData = await response.json();
+      let responseData;
+      try {
+        const responseText = await response.text();
+        console.log(`[API] Response body: ${responseText.substring(0, 200)}...`);
+        
+        if (!responseText.trim()) {
+          throw new Error('Empty response body');
+        }
+        
+        responseData = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error(`[API] JSON parse error: ${parseError}`);
+        throw this.createParseError(parseError);
+      }
 
       // 构建 API 响应对象
       const apiResponse: APIResponse<T> = {
@@ -300,6 +354,12 @@ class HTTPClientImpl implements HTTPClient {
     return error;
   }
 
+  private createParseError(originalError: any): APIError {
+    const error = new Error('Invalid JSON response from server') as APIError;
+    error.code = 'PARSE_ERROR';
+    return error;
+  }
+
   private createUnknownError(originalError: any): APIError {
     const error = new Error(originalError?.message || 'Unknown error') as APIError;
     error.code = 'NETWORK_ERROR';
@@ -383,13 +443,17 @@ class APIClientImpl implements APIClient {
   // ============= 用户相关 =============
 
   async getCurrentUser(): Promise<User> {
-    const response = await this.http.get('/users/me');
+    const response = await this.http.get('/auth/me');
     return response.body;
   }
 
   async updateUser(data: FormData): Promise<Partial<User>> {
-    const response = await this.http.put('/users/me', data);
+    const response = await this.http.put('/auth/me', data);
     return response.body;
+  }
+
+  async changePassword(data: ChangePasswordRequest): Promise<void> {
+    await this.http.post('/auth/change-password', data);
   }
 
   // ============= 食物相关 =============
@@ -451,7 +515,7 @@ class APIClientImpl implements APIClient {
 
   async getShoppingList(): Promise<ShoppingListItem[]> {
     const response = await this.http.get('/shopping-list');
-    return response.body;
+    return response.body.items || [];
   }
 
   async addShoppingItem(data: CreateShoppingItemRequest): Promise<ShoppingListItem> {
@@ -460,7 +524,11 @@ class APIClientImpl implements APIClient {
   }
 
   async updateShoppingList(data: UpdateShoppingListRequest): Promise<void> {
-    await this.http.patch('/shopping-list/items', data);
+    await this.http.patch('/shopping-list/items/batch', data);
+  }
+
+  async deleteShoppingItem(id: number): Promise<void> {
+    await this.http.delete(`/shopping-list/items/${id}`);
   }
 
   // ============= AI功能相关 =============
@@ -488,7 +556,10 @@ class APIClientImpl implements APIClient {
     }
     
     // AI分析需要更长的超时时间（3分钟）
-    const response = await this.http.post('/ai/analyze-food', formData, {
+    const response = await this.http.request({
+      method: 'POST',
+      url: '/ai/analyze-food',
+      data: formData,
       timeout: 180000 // 3分钟超时
     });
     return response.body;
@@ -519,7 +590,7 @@ class APIClientImpl implements APIClient {
 
 const API_CONFIG: APIClientConfig = {
   // baseURL: __DEV__ ? 'http://localhost:5000/api' : 'https://api.foodmanager.com/api',
-  baseURL: __DEV__ ? 'http://192.168.31.248:5000/api' : 'https://api.foodmanager.com/api',
+  baseURL: __DEV__ ? 'http://192.168.1.2:5001/api' : 'https://api.foodmanager.com/api',
   timeout: 120000, // 2分钟超时，适应AI分析的长时间处理
   headers: {
     'Accept': 'application/json',

@@ -11,10 +11,10 @@ from foodback.utils.response_utils import (
     created_response, not_found_response
 )
 
-blueprint = Blueprint('shopping', __name__, url_prefix='/shopping-list')
+blueprint = Blueprint('shopping', __name__)
 
 
-@blueprint.route('', methods=['GET'])
+@blueprint.route('/shopping-list', methods=['GET'])
 @jwt_required
 def get_shopping_list():
     """获取购物清单"""
@@ -74,7 +74,7 @@ def get_shopping_list():
         return error_response('获取购物清单失败', 500)
 
 
-@blueprint.route('/items', methods=['POST'])
+@blueprint.route('/shopping-list/items', methods=['POST'])
 @jwt_required
 def add_shopping_item():
     """添加购物清单项"""
@@ -121,7 +121,7 @@ def add_shopping_item():
         return error_response('添加购物项失败', 500)
 
 
-@blueprint.route('/items/<int:item_id>', methods=['PUT'])
+@blueprint.route('/shopping-list/items/<int:item_id>', methods=['PUT'])
 @jwt_required
 def update_shopping_item(item_id):
     """更新购物清单项"""
@@ -180,7 +180,7 @@ def update_shopping_item(item_id):
         return error_response('更新购物项失败', 500)
 
 
-@blueprint.route('/items/<int:item_id>', methods=['DELETE'])
+@blueprint.route('/shopping-list/items/<int:item_id>', methods=['DELETE'])
 @jwt_required
 def delete_shopping_item(item_id):
     """删除购物清单项"""
@@ -209,7 +209,7 @@ def delete_shopping_item(item_id):
         return error_response('删除购物项失败', 500)
 
 
-@blueprint.route('/items/batch', methods=['PATCH'])
+@blueprint.route('/shopping-list/items/batch', methods=['PATCH'])
 @jwt_required
 def batch_update_items():
     """批量更新购物清单项"""
@@ -279,7 +279,7 @@ def batch_update_items():
         return error_response('批量操作失败', 500)
 
 
-@blueprint.route('/clear-checked', methods=['DELETE'])
+@blueprint.route('/shopping-list/clear-checked', methods=['DELETE'])
 @jwt_required
 def clear_checked_items():
     """清除已勾选的购物项"""
@@ -314,7 +314,7 @@ def clear_checked_items():
         return error_response('清除已勾选项目失败', 500)
 
 
-@blueprint.route('/toggle-all', methods=['PATCH'])
+@blueprint.route('/shopping-list/toggle-all', methods=['PATCH'])
 @jwt_required
 def toggle_all_items():
     """全选/取消全选购物项"""
@@ -355,7 +355,7 @@ def toggle_all_items():
         return error_response('全选/取消全选操作失败', 500)
 
 
-@blueprint.route('/stats', methods=['GET'])
+@blueprint.route('/shopping-list/stats', methods=['GET'])
 @jwt_required
 def get_shopping_stats():
     """获取购物清单统计信息"""

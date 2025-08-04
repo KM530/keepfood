@@ -17,10 +17,20 @@ export function useShoppingList() {
 
     try {
       const response = await apiClient.getShoppingList();
-      setItems(response);
+      console.log('Shopping list response:', response);
+      
+      // 确保响应是数组
+      if (Array.isArray(response)) {
+        setItems(response);
+      } else {
+        console.error('Invalid response format:', response);
+        setItems([]);
+        setError('响应格式不正确');
+      }
     } catch (err) {
       console.error('Failed to fetch shopping list:', err);
       setError(err instanceof Error ? err.message : '获取购物清单失败');
+      setItems([]); // 确保在错误时设置为空数组
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -50,17 +60,17 @@ export function useShoppingList() {
     try {
       // 乐观更新
       setItems(prev => prev.map(item => 
-        item.id === id ? { ...item, completed } : item
+        item.id === id ? { ...item, is_checked: completed } : item
       ));
 
       await apiClient.updateShoppingList({
-        items: [{ id, completed }]
+        updates: [{ id, is_checked: completed }]
       });
     } catch (err) {
       console.error('Failed to toggle shopping item:', err);
       // 回滚乐观更新
       setItems(prev => prev.map(item => 
-        item.id === id ? { ...item, completed: !completed } : item
+        item.id === id ? { ...item, is_checked: !completed } : item
       ));
       throw err;
     }
@@ -74,10 +84,12 @@ export function useShoppingList() {
       // 乐观更新
       setItems(prev => prev.map(item => {
         const update = updates.find(u => u.id === item.id);
-        return update ? { ...item, completed: update.completed } : item;
+        return update ? { ...item, is_checked: update.completed } : item;
       }));
 
-      await apiClient.updateShoppingList({ items: updates });
+      // 转换字段名给API
+      const apiUpdates = updates.map(u => ({ id: u.id, is_checked: u.completed }));
+      await apiClient.updateShoppingList({ updates: apiUpdates });
     } catch (err) {
       console.error('Failed to batch update shopping items:', err);
       // 回滚乐观更新
@@ -94,10 +106,7 @@ export function useShoppingList() {
       // 乐观更新
       setItems(prev => prev.filter(item => item.id !== id));
 
-      await apiClient.updateShoppingList({
-        items: [{ id, completed: false }], // 这里需要根据实际API调整
-        deleteIds: [id]
-      });
+      await apiClient.deleteShoppingItem(id);
     } catch (err) {
       console.error('Failed to delete shopping item:', err);
       // 回滚乐观更新
@@ -108,18 +117,18 @@ export function useShoppingList() {
 
   // 清空已完成项目
   const clearCompleted = useCallback(async () => {
-    const completedIds = items.filter(item => item.completed).map(item => item.id);
+    const completedIds = items.filter(item => item.is_checked).map(item => item.id);
     if (completedIds.length === 0) return;
 
     const originalItems = [...items];
     
     try {
       // 乐观更新
-      setItems(prev => prev.filter(item => !item.completed));
+      setItems(prev => prev.filter(item => !item.is_checked));
 
       await apiClient.updateShoppingList({
-        items: [],
-        deleteIds: completedIds
+        updates: [],
+        deletions: completedIds
       });
     } catch (err) {
       console.error('Failed to clear completed items:', err);
@@ -136,8 +145,8 @@ export function useShoppingList() {
   // 统计信息
   const stats = {
     total: items.length,
-    completed: items.filter(item => item.completed).length,
-    pending: items.filter(item => !item.completed).length,
+    completed: items.filter(item => item.is_checked).length,
+    pending: items.filter(item => !item.is_checked).length,
   };
 
   return {

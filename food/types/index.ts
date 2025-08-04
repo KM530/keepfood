@@ -31,6 +31,12 @@ export interface RegisterRequest {
   confirm_password: string;
 }
 
+export interface ChangePasswordRequest {
+  current_password: string;
+  new_password: string;
+  confirm_new_password: string;
+}
+
 export interface AuthResponse {
   token: string;
   user: User;
@@ -157,14 +163,14 @@ export interface ShoppingListItem {
 }
 
 export interface CreateShoppingItemRequest {
-  itemName: string;
-  fromFoodId?: number;
+  item_name: string;
+  created_from_food_id?: number;
 }
 
 export interface UpdateShoppingListRequest {
   updates?: Array<{
     id: number;
-    isChecked: boolean;
+    is_checked: boolean;
   }>;
   deletions?: number[];
 }

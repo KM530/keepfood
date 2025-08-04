@@ -150,7 +150,7 @@ class AIFoodAnalysisService:
 2. 从配料表中，识别出常见的人工添加剂、高糖成分、防腐剂或常见过敏原（如麸质、坚果等），并列出它们 (harmful_ingredients)。
 3. 从图片中找到生产日期，格式为YYYY-MM-DD (production_date)。
 4. 从图片中找到保质期信息，提取数值和单位，例如"12个月"提取为数值12和单位"month" (shelf_life_value, shelf_life_unit)。
-5. 根据生产日期和保质期，计算出具体的过期日期，格式为YYYY-MM-DD (expiry_date)。
+5. 根据生产日期和保质期，计算出具体的过期日期，格式为YYYY-MM-DD (expiry_date)。包装可能没有生产日期只有过期时间，请根据过期时间计算出生产日期。
 6. 从图片中识别营养成分表，提取每100g的热量值，单位为千卡 (calories_kcal)。
 7. 根据热量值，估算需要多少分钟的运动来消耗这些热量（假设中等强度运动每分钟消耗5千卡） (energy_offset_info)。
 

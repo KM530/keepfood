@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useReducer, useEffect, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { apiClient } from '@/lib/api';
-import type { User, AuthState, LoginRequest, RegisterRequest } from '@/types';
+import type { User, AuthState, LoginRequest, RegisterRequest, ChangePasswordRequest } from '@/types';
 
 // ============= 认证状态管理 =============
 
@@ -76,6 +76,8 @@ function authReducer(state: AuthState, action: AuthAction): AuthState {
       return {
         ...state,
         user: state.user ? { ...state.user, ...action.payload } : null,
+        loading: false,
+        error: null,
       };
 
     default:
@@ -97,7 +99,8 @@ interface AuthContextValue {
   login: (credentials: LoginRequest) => Promise<void>;
   register: (data: RegisterRequest) => Promise<void>;
   logout: () => Promise<void>;
-  updateUser: (data: Partial<User>) => void;
+  updateUser: (data: FormData) => Promise<void>;
+  changePassword: (data: ChangePasswordRequest) => Promise<void>;
   clearError: () => void;
 }
 
@@ -211,13 +214,33 @@ export function AuthProvider({ children }: AuthProviderProps) {
   };
 
   // 更新用户信息
-  const updateUser = (data: Partial<User>) => {
-    dispatch({ type: 'UPDATE_USER', payload: data });
-    
-    // 更新存储中的用户信息
-    if (state.user) {
-      const updatedUser = { ...state.user, ...data };
-      AsyncStorage.setItem('auth_user', JSON.stringify(updatedUser));
+  const updateUser = async (data: FormData) => {
+    try {
+      const updatedUser = await apiClient.updateUser(data);
+      
+      // 更新状态
+      dispatch({ type: 'UPDATE_USER', payload: updatedUser });
+      
+      // 更新存储中的用户信息
+      if (state.user) {
+        const newUser = { ...state.user, ...updatedUser };
+        await AsyncStorage.setItem('auth_user', JSON.stringify(newUser));
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : '更新用户信息失败';
+      dispatch({ type: 'AUTH_FAILURE', payload: errorMessage });
+      throw error;
+    }
+  };
+
+  // 修改密码
+  const changePassword = async (data: ChangePasswordRequest) => {
+    try {
+      await apiClient.changePassword(data);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : '修改密码失败';
+      dispatch({ type: 'AUTH_FAILURE', payload: errorMessage });
+      throw error;
     }
   };
 
@@ -238,6 +261,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     register,
     logout,
     updateUser,
+    changePassword,
     clearError,
   };
 

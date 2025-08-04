@@ -15,7 +15,7 @@ export function ImagePicker({
   value,
   onImageSelected,
   onImageRemoved,
-  placeholder = '选择食物图片',
+  placeholder = '                   选择图片                    ',
 }: ImagePickerProps) {
   const { theme } = useTheme();
   const [loading, setLoading] = useState(false);

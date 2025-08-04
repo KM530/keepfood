@@ -7,6 +7,7 @@ import { Layout } from '@/components/ui/Layout';
 import { Loading } from '@/components/ui/Loading';
 import { Button } from '@/components/ui/Button';
 import { ShoppingListItem } from '@/components/ui/ShoppingListItem';
+import { InputModal } from '@/components/ui/InputModal';
 import { useShoppingList } from '@/hooks/useShoppingList';
 import type { ShoppingListItem as ShoppingItem } from '@/types';
 
@@ -28,29 +29,29 @@ export default function ShoppingScreen() {
 
   const [batchMode, setBatchMode] = useState(false);
   const [selectedItems, setSelectedItems] = useState<Set<number>>(new Set());
+  const [showAddModal, setShowAddModal] = useState(false);
 
   // 处理添加新项目
   const handleAddItem = () => {
-    Alert.prompt(
-      '添加购物项',
-      '请输入要购买的物品',
-      [
-        { text: '取消', style: 'cancel' },
-        {
-          text: '添加',
-          onPress: async (value) => {
-            if (!value?.trim()) return;
-            
-            try {
-              await addItem({ name: value.trim() });
-            } catch (error) {
-              Alert.alert('添加失败', '添加购物项失败，请重试');
-            }
-          },
-        },
-      ],
-      'plain-text'
-    );
+    setShowAddModal(true);
+  };
+
+  // 确认添加项目
+  const handleConfirmAdd = async (value: string) => {
+    setShowAddModal(false);
+    
+    if (!value?.trim()) return;
+    
+    try {
+      await addItem({ item_name: value.trim() });
+    } catch (error) {
+      Alert.alert('添加失败', '添加购物项失败，请重试');
+    }
+  };
+
+  // 取消添加项目
+  const handleCancelAdd = () => {
+    setShowAddModal(false);
   };
 
   // 处理切换项目状态
@@ -379,6 +380,16 @@ export default function ShoppingScreen() {
             />
           </View>
         )}
+
+        {/* 添加购物项模态框 */}
+        <InputModal
+          visible={showAddModal}
+          title="添加购物项"
+          message="请输入要购买的物品"
+          placeholder="请输入物品名称"
+          onConfirm={handleConfirmAdd}
+          onCancel={handleCancelAdd}
+        />
       </SafeAreaView>
     </Layout>
   );
