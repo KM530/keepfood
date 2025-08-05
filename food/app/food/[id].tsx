@@ -161,7 +161,7 @@ export default function FoodDetailScreen() {
       return filename;
     }
     // 数据库存储的是文件名，需要构建完整的URL路径
-    return `http://192.168.1.2:5001/${filename}`;
+    return `http://192.168.1.114:5001/${filename}`;
   };
 
   // 处理图片滚动

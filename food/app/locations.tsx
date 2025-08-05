@@ -33,10 +33,13 @@ export default function LocationsScreen() {
             }
             
             try {
-              await apiClient.createLocation({ name: value.trim() });
+              console.log('Creating location:', value.trim());
+              const result = await apiClient.createLocation({ name: value.trim() });
+              console.log('Location created:', result);
               await refetch();
               Alert.alert('成功', '位置添加成功');
             } catch (error) {
+              console.error('Create location error:', error);
               Alert.alert('添加失败', error instanceof Error ? error.message : '添加位置失败，请重试');
             }
           },
@@ -66,9 +69,13 @@ export default function LocationsScreen() {
             }
             
             try {
-              // TODO: 实现编辑位置API
-              Alert.alert('提示', '编辑功能开发中...');
+              console.log('Updating location:', location.id, 'with name:', value.trim());
+              const result = await apiClient.updateLocation(location.id, { name: value.trim() });
+              console.log('Location updated:', result);
+              await refetch();
+              Alert.alert('成功', '位置更新成功');
             } catch (error) {
+              console.error('Update location error:', error);
               Alert.alert('编辑失败', error instanceof Error ? error.message : '编辑位置失败，请重试');
             }
           },
@@ -92,9 +99,13 @@ export default function LocationsScreen() {
           onPress: async () => {
             setDeleting(prev => new Set([...prev, location.id]));
             try {
-              // TODO: 实现删除位置API
-              Alert.alert('提示', '删除功能开发中...');
+              console.log('Deleting location:', location.id);
+              await apiClient.deleteLocation(location.id);
+              console.log('Location deleted successfully');
+              await refetch();
+              Alert.alert('成功', '位置删除成功');
             } catch (error) {
+              console.error('Delete location error:', error);
               Alert.alert('删除失败', error instanceof Error ? error.message : '删除位置失败，请重试');
             } finally {
               setDeleting(prev => {
@@ -135,7 +146,7 @@ export default function LocationsScreen() {
               </Text>
             </View>
             <Text style={[styles.createdAt, { color: theme.colors.textSecondary }]}>
-              创建时间：{new Date(item.createdAt).toLocaleDateString()}
+              创建时间：{new Date(item.created_at).toLocaleDateString()}
             </Text>
           </View>
         </View>

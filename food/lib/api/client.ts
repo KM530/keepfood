@@ -28,7 +28,9 @@ import type {
   UpdateFoodRequest,
   ConsumeFoodRequest,
   CreateCategoryRequest,
+  UpdateCategoryRequest,
   CreateLocationRequest,
+  UpdateLocationRequest,
   CreateShoppingItemRequest,
   UpdateShoppingListRequest,
   GenerateRecipesRequest,
@@ -499,6 +501,15 @@ class APIClientImpl implements APIClient {
     return response.body;
   }
 
+  async updateCategory(id: number, data: { name: string; description?: string }): Promise<Category> {
+    const response = await this.http.put(`/categories/${id}`, data);
+    return response.body;
+  }
+
+  async deleteCategory(id: number): Promise<void> {
+    await this.http.delete(`/categories/${id}`);
+  }
+
   // ============= 位置相关 =============
 
   async getLocations(): Promise<Location[]> {
@@ -509,6 +520,15 @@ class APIClientImpl implements APIClient {
   async createLocation(data: CreateLocationRequest): Promise<Location> {
     const response = await this.http.post('/locations', data);
     return response.body;
+  }
+
+  async updateLocation(id: number, data: { name: string; description?: string }): Promise<Location> {
+    const response = await this.http.put(`/locations/${id}`, data);
+    return response.body;
+  }
+
+  async deleteLocation(id: number): Promise<void> {
+    await this.http.delete(`/locations/${id}`);
   }
 
   // ============= 购物清单相关 =============
@@ -590,7 +610,7 @@ class APIClientImpl implements APIClient {
 
 const API_CONFIG: APIClientConfig = {
   // baseURL: __DEV__ ? 'http://localhost:5000/api' : 'https://api.foodmanager.com/api',
-  baseURL: __DEV__ ? 'http://192.168.1.2:5001/api' : 'https://api.foodmanager.com/api',
+  baseURL: __DEV__ ? 'http://192.168.1.114:5001/api' : 'https://api.foodmanager.com/api',
   timeout: 120000, // 2分钟超时，适应AI分析的长时间处理
   headers: {
     'Accept': 'application/json',

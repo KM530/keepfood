@@ -13,7 +13,29 @@ export function useLocations() {
 
     try {
       const response = await apiClient.getLocations();
-      setLocations(response);
+      // 为每个位置获取食物数量
+      const locationsWithCount = await Promise.all(
+        response.map(async (location) => {
+          try {
+            const foodsResponse = await apiClient.getFoods({ 
+              page: 1, 
+              limit: 1, 
+              locationId: location.id 
+            });
+            return {
+              ...location,
+              foodCount: foodsResponse.total
+            };
+          } catch (err) {
+            console.error(`Failed to get food count for location ${location.id}:`, err);
+            return {
+              ...location,
+              foodCount: 0
+            };
+          }
+        })
+      );
+      setLocations(locationsWithCount);
     } catch (err) {
       console.error('Failed to fetch locations:', err);
       setError(err instanceof Error ? err.message : '获取位置失败');

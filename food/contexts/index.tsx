@@ -4,6 +4,7 @@ import React, { ReactNode } from 'react';
 import { AuthProvider } from './AuthContext';
 import { AppProvider } from './AppContext';
 import { ThemeProvider } from './ThemeContext';
+import { LanguageProvider } from './LanguageContext';
 
 // ============= 组合所有Provider =============
 
@@ -14,11 +15,13 @@ interface ProvidersProps {
 export function Providers({ children }: ProvidersProps) {
   return (
     <ThemeProvider>
-      <AuthProvider>
-        <AppProvider>
-          {children}
-        </AppProvider>
-      </AuthProvider>
+      <LanguageProvider>
+        <AuthProvider>
+          <AppProvider>
+            {children}
+          </AppProvider>
+        </AuthProvider>
+      </LanguageProvider>
     </ThemeProvider>
   );
 }
@@ -28,6 +31,7 @@ export function Providers({ children }: ProvidersProps) {
 export { AuthProvider, useAuth, useAuthGuard } from './AuthContext';
 export { AppProvider, useApp } from './AppContext';
 export { ThemeProvider, useTheme, useThemedStyles } from './ThemeContext';
+export { LanguageProvider, useLanguage } from './LanguageContext';
 
 // ============= 便捷Hook =============
 

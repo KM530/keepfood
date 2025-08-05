@@ -19,6 +19,7 @@ export default function CategoriesScreen() {
 
   // 处理添加新分类
   const handleAddCategory = () => {
+    console.log('Add category button pressed');
     Alert.prompt(
       '新增分类',
       '请输入分类名称',
@@ -27,16 +28,20 @@ export default function CategoriesScreen() {
         {
           text: '添加',
           onPress: async (value) => {
+            console.log('Add category onPress called with value:', value);
             if (!value?.trim()) {
               Alert.alert('错误', '分类名称不能为空');
               return;
             }
             
             try {
-              await apiClient.createCategory({ name: value.trim() });
+              console.log('Creating category:', value.trim());
+              const result = await apiClient.createCategory({ name: value.trim() });
+              console.log('Category created:', result);
               await refetch();
               Alert.alert('成功', '分类添加成功');
             } catch (error) {
+              console.error('Create category error:', error);
               Alert.alert('添加失败', error instanceof Error ? error.message : '添加分类失败，请重试');
             }
           },
@@ -48,6 +53,7 @@ export default function CategoriesScreen() {
 
   // 处理编辑分类
   const handleEditCategory = (category: Category) => {
+    console.log('Edit category button pressed for:', category.name);
     Alert.prompt(
       '编辑分类',
       '请修改分类名称',
@@ -56,6 +62,7 @@ export default function CategoriesScreen() {
         {
           text: '保存',
           onPress: async (value) => {
+            console.log('Edit category onPress called with value:', value);
             if (!value?.trim()) {
               Alert.alert('错误', '分类名称不能为空');
               return;
@@ -66,9 +73,13 @@ export default function CategoriesScreen() {
             }
             
             try {
-              // TODO: 实现编辑分类API
-              Alert.alert('提示', '编辑功能开发中...');
+              console.log('Updating category:', category.id, 'with name:', value.trim());
+              const result = await apiClient.updateCategory(category.id, { name: value.trim() });
+              console.log('Category updated:', result);
+              await refetch();
+              Alert.alert('成功', '分类更新成功');
             } catch (error) {
+              console.error('Update category error:', error);
               Alert.alert('编辑失败', error instanceof Error ? error.message : '编辑分类失败，请重试');
             }
           },
@@ -81,7 +92,7 @@ export default function CategoriesScreen() {
 
   // 处理删除分类
   const handleDeleteCategory = async (category: Category) => {
-    if (category.isSystem) {
+    if (category.is_system) {
       Alert.alert('提示', '系统预置分类不能删除');
       return;
     }
@@ -97,9 +108,13 @@ export default function CategoriesScreen() {
           onPress: async () => {
             setDeleting(prev => new Set([...prev, category.id]));
             try {
-              // TODO: 实现删除分类API
-              Alert.alert('提示', '删除功能开发中...');
+              console.log('Deleting category:', category.id);
+              await apiClient.deleteCategory(category.id);
+              console.log('Category deleted successfully');
+              await refetch();
+              Alert.alert('成功', '分类删除成功');
             } catch (error) {
+              console.error('Delete category error:', error);
               Alert.alert('删除失败', error instanceof Error ? error.message : '删除分类失败，请重试');
             } finally {
               setDeleting(prev => {
@@ -125,7 +140,7 @@ export default function CategoriesScreen() {
             <Text style={[styles.categoryName, { color: theme.colors.text }]}>
               {item.name}
             </Text>
-            {item.isSystem && (
+            {item.is_system && (
               <View style={[styles.systemBadge, { backgroundColor: theme.colors.primary }]}>
                 <Text style={styles.systemBadgeText}>系统</Text>
               </View>
@@ -144,13 +159,13 @@ export default function CategoriesScreen() {
               </Text>
             </View>
             <Text style={[styles.createdAt, { color: theme.colors.textSecondary }]}>
-              创建时间：{new Date(item.createdAt).toLocaleDateString()}
+              创建时间：{new Date(item.created_at).toLocaleDateString()}
             </Text>
           </View>
         </View>
 
         <View style={styles.categoryActions}>
-          {!item.isSystem && (
+          {!item.is_system && (
             <>
               <TouchableOpacity
                 style={styles.actionButton}
@@ -251,7 +266,7 @@ export default function CategoriesScreen() {
             </View>
             <View style={styles.statItem}>
               <Text style={[styles.statValue, { color: '#4CAF50' }]}>
-                {categories.filter(c => c.isSystem).length}
+                {categories.filter(c => c.is_system).length}
               </Text>
               <Text style={[styles.statLabel, { color: theme.colors.textSecondary }]}>
                 系统分类
@@ -259,7 +274,7 @@ export default function CategoriesScreen() {
             </View>
             <View style={styles.statItem}>
               <Text style={[styles.statValue, { color: '#FF9800' }]}>
-                {categories.filter(c => !c.isSystem).length}
+                {categories.filter(c => !c.is_system).length}
               </Text>
               <Text style={[styles.statLabel, { color: theme.colors.textSecondary }]}>
                 自定义分类

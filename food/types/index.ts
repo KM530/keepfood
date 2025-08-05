@@ -127,8 +127,10 @@ export interface ConsumeFoodRequest {
 export interface Category {
   id: number;
   name: string;
+  description?: string;
   is_system: boolean;
   user_id?: number;
+  foodCount?: number;
   created_at: string;
   updated_at: string;
 }
@@ -137,18 +139,30 @@ export interface CreateCategoryRequest {
   name: string;
 }
 
+export interface UpdateCategoryRequest {
+  name: string;
+  description?: string;
+}
+
 // ============= 位置相关类型 =============
 
 export interface Location {
   id: number;
   name: string;
+  description?: string;
   user_id: number;
+  foodCount?: number;
   created_at: string;
   updated_at: string;
 }
 
 export interface CreateLocationRequest {
   name: string;
+}
+
+export interface UpdateLocationRequest {
+  name: string;
+  description?: string;
 }
 
 // ============= 购物清单相关类型 =============

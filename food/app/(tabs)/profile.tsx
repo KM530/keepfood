@@ -8,6 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Layout } from '@/components/ui/Layout';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { useStats } from '@/hooks/useStats';
 
 interface MenuItem {
   icon: string;
@@ -21,12 +22,7 @@ interface MenuItem {
 export default function ProfileScreen() {
   const { theme } = useTheme();
   const { user, logout } = useAuth();
-  const [stats] = useState({
-    totalFoods: 42,
-    expiringFoods: 3,
-    shoppingItems: 8,
-    daysUsed: 15,
-  });
+  const { stats, loading: statsLoading } = useStats();
 
   // 处理退出登录
   const handleLogout = () => {
@@ -101,13 +97,13 @@ export default function ProfileScreen() {
           icon: 'color-palette-outline',
           title: '主题设置',
           subtitle: '深色/浅色模式',
-          onPress: () => Alert.alert('提示', '主题设置功能开发中...'),
+          onPress: () => router.push('/theme-settings'),
         },
         {
           icon: 'language-outline',
           title: '语言设置',
           subtitle: '界面语言',
-          onPress: () => Alert.alert('提示', '语言设置功能开发中...'),
+          onPress: () => router.push('/language-settings'),
         },
       ],
     },
@@ -118,7 +114,7 @@ export default function ProfileScreen() {
           icon: 'help-circle-outline',
           title: '使用帮助',
           subtitle: '功能介绍和使用指南',
-          onPress: () => Alert.alert('提示', '使用帮助功能开发中...'),
+          onPress: () => router.push('/help'),
         },
         {
           icon: 'chatbubble-outline',
@@ -185,8 +181,8 @@ export default function ProfileScreen() {
           <Card style={styles.userCard}>
             <View style={styles.userInfo}>
               <View style={styles.avatarContainer}>
-                {user?.avatarUrl ? (
-                  <Image source={{ uri: user.avatarUrl }} style={styles.avatar} />
+                {user?.avatar_url ? (
+                  <Image source={{ uri: user.avatar_url }} style={styles.avatar} />
                 ) : (
                   <View style={[styles.avatarPlaceholder, { backgroundColor: theme.colors.primary }]}>
                     <Ionicons name="person" size={32} color="#fff" />
@@ -196,7 +192,7 @@ export default function ProfileScreen() {
               
               <View style={styles.userDetails}>
                 <Text style={[styles.userName, { color: theme.colors.text }]}>
-                  {user?.nickname || user?.username || '用户'}
+                  {user?.nickname || user?.email || '用户'}
                 </Text>
                 <Text style={[styles.userEmail, { color: theme.colors.textSecondary }]}>
                   {user?.email || '未设置邮箱'}
@@ -220,7 +216,7 @@ export default function ProfileScreen() {
             <View style={styles.statsGrid}>
               <View style={styles.statItem}>
                 <Text style={[styles.statValue, { color: theme.colors.primary }]}>
-                  {stats.totalFoods}
+                  {statsLoading ? '...' : stats.totalFoods}
                 </Text>
                 <Text style={[styles.statLabel, { color: theme.colors.textSecondary }]}>
                   总食物数
@@ -228,7 +224,7 @@ export default function ProfileScreen() {
               </View>
               <View style={styles.statItem}>
                 <Text style={[styles.statValue, { color: '#FF9800' }]}>
-                  {stats.expiringFoods}
+                  {statsLoading ? '...' : stats.expiringFoods}
                 </Text>
                 <Text style={[styles.statLabel, { color: theme.colors.textSecondary }]}>
                   即将过期
@@ -236,18 +232,10 @@ export default function ProfileScreen() {
               </View>
               <View style={styles.statItem}>
                 <Text style={[styles.statValue, { color: '#4CAF50' }]}>
-                  {stats.shoppingItems}
+                  {statsLoading ? '...' : stats.shoppingItems}
                 </Text>
                 <Text style={[styles.statLabel, { color: theme.colors.textSecondary }]}>
                   购物清单
-                </Text>
-              </View>
-              <View style={styles.statItem}>
-                <Text style={[styles.statValue, { color: theme.colors.primary }]}>
-                  {stats.daysUsed}
-                </Text>
-                <Text style={[styles.statLabel, { color: theme.colors.textSecondary }]}>
-                  使用天数
                 </Text>
               </View>
             </View>
