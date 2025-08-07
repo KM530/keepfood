@@ -56,8 +56,8 @@ class HTTPClientImpl implements HTTPClient {
     this.timeout = config.timeout;
     this.defaultHeaders = { ...config.headers };
     
-    // 从存储中加载token
-    this.loadToken();
+    // 从存储中加载token（异步，但不等待）
+    this.loadToken().catch(console.warn);
   }
 
   private async loadToken(): Promise<void> {
@@ -65,6 +65,9 @@ class HTTPClientImpl implements HTTPClient {
       const token = await AsyncStorage.getItem('auth_token');
       if (token) {
         this.token = token;
+        console.log('Token loaded from storage:', token.substring(0, 20) + '...');
+      } else {
+        console.log('No token found in storage');
       }
     } catch (error) {
       console.warn('Failed to load token from storage:', error);
@@ -73,12 +76,19 @@ class HTTPClientImpl implements HTTPClient {
 
   setToken(token: string): void {
     this.token = token;
+    console.log('Token set:', token.substring(0, 20) + '...');
     AsyncStorage.setItem('auth_token', token).catch(console.warn);
   }
 
   clearToken(): void {
     this.token = null;
     AsyncStorage.removeItem('auth_token').catch(console.warn);
+  }
+
+  async ensureTokenLoaded(): Promise<void> {
+    if (this.token === null) {
+      await this.loadToken();
+    }
   }
 
   addRequestInterceptor(interceptor: RequestInterceptor): void {
@@ -129,6 +139,9 @@ class HTTPClientImpl implements HTTPClient {
 
   async request<T = any>(config: APIRequestConfig): Promise<APIResponse<T>> {
     try {
+      // 确保token已加载
+      await this.ensureTokenLoaded();
+      
       // 处理请求拦截器
       const processedConfig = await this.processRequestInterceptors(config);
       
@@ -145,6 +158,9 @@ class HTTPClientImpl implements HTTPClient {
       // 添加认证头
       if (this.token) {
         headers.Authorization = `Bearer ${this.token}`;
+        console.log('Adding Authorization header with token');
+      } else {
+        console.log('No token available for Authorization header');
       }
 
       // 处理请求体
@@ -165,6 +181,8 @@ class HTTPClientImpl implements HTTPClient {
       const timeoutId = setTimeout(() => controller.abort(), processedConfig.timeout || this.timeout);
 
       console.log(`[API] Making ${processedConfig.method} request to: ${url}`);
+      console.log(`[API] Request headers:`, headers);
+      console.log(`[API] Request body:`, body);
       
       const response = await fetch(url, {
         method: processedConfig.method,
@@ -176,6 +194,7 @@ class HTTPClientImpl implements HTTPClient {
       clearTimeout(timeoutId);
 
       console.log(`[API] Response status: ${response.status} ${response.statusText}`);
+      console.log(`[API] Response headers:`, Object.fromEntries(response.headers.entries()));
 
       // 检查响应状态
       if (!response.ok) {
@@ -462,7 +481,56 @@ class APIClientImpl implements APIClient {
 
   async getFoods(params?: GetFoodsParams): Promise<PaginatedResponse<FoodListItem>> {
     const response = await this.http.get('/foods', params);
-    return response.body;
+    
+    // 转换后端数据格式到前端格式
+    const convertedItems = response.body.items.map((item: any) => ({
+      id: item.id,
+      name: item.name,
+      imageUrl: this.processImageUrl(item.image_url),
+      quantity: item.quantity,
+      unit: item.unit,
+      expiryDate: item.expiry_date,
+      status: item.status,
+      statusText: item.status_display,
+      statusColor: this.getStatusColor(item.status),
+      daysUntilExpiry: item.days_until_expiry,
+      categoryName: item.category_name,
+      locationName: item.location_name,
+    }));
+    
+    return {
+      ...response.body,
+      items: convertedItems,
+    };
+  }
+
+  private getStatusColor(status: string): string {
+    switch (status) {
+      case 'expired':
+        return '#F44336';
+      case 'expiring_soon':
+        return '#FF9800';
+      default:
+        return '#4CAF50';
+    }
+  }
+
+  private processImageUrl(imageUrl: any): string | undefined {
+    if (!imageUrl) {
+      return undefined;
+    }
+    
+    // 如果是数组，取第一个图片
+    if (Array.isArray(imageUrl)) {
+      return imageUrl.length > 0 ? imageUrl[0] : undefined;
+    }
+    
+    // 如果是字符串，直接返回
+    if (typeof imageUrl === 'string') {
+      return imageUrl;
+    }
+    
+    return undefined;
   }
 
   async getFood(id: number): Promise<Food> {

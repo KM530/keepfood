@@ -8,6 +8,7 @@ import { Layout } from '@/components/ui/Layout';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Loading } from '@/components/ui/Loading';
+import { InputModal } from '@/components/ui/InputModal';
 import { useCategories } from '@/hooks/useCategories';
 import { apiClient } from '@/lib/api';
 import type { Category } from '@/types';
@@ -16,78 +17,77 @@ export default function CategoriesScreen() {
   const { theme } = useTheme();
   const { categories, loading, refetch } = useCategories();
   const [deleting, setDeleting] = useState<Set<number>>(new Set());
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
 
   // 处理添加新分类
   const handleAddCategory = () => {
     console.log('Add category button pressed');
-    Alert.prompt(
-      '新增分类',
-      '请输入分类名称',
-      [
-        { text: '取消', style: 'cancel' },
-        {
-          text: '添加',
-          onPress: async (value) => {
-            console.log('Add category onPress called with value:', value);
-            if (!value?.trim()) {
-              Alert.alert('错误', '分类名称不能为空');
-              return;
-            }
-            
-            try {
-              console.log('Creating category:', value.trim());
-              const result = await apiClient.createCategory({ name: value.trim() });
-              console.log('Category created:', result);
-              await refetch();
-              Alert.alert('成功', '分类添加成功');
-            } catch (error) {
-              console.error('Create category error:', error);
-              Alert.alert('添加失败', error instanceof Error ? error.message : '添加分类失败，请重试');
-            }
-          },
-        },
-      ],
-      'plain-text'
-    );
+    setShowAddModal(true);
+  };
+
+  const handleAddConfirm = async (value: string) => {
+    console.log('Add category onPress called with value:', value);
+    if (!value?.trim()) {
+      Alert.alert('错误', '分类名称不能为空');
+      return;
+    }
+    
+    try {
+      console.log('Creating category:', value.trim());
+      const result = await apiClient.createCategory({ name: value.trim() });
+      console.log('Category created:', result);
+      await refetch();
+      Alert.alert('成功', '分类添加成功');
+      setShowAddModal(false);
+    } catch (error) {
+      console.error('Create category error:', error);
+      Alert.alert('添加失败', error instanceof Error ? error.message : '添加分类失败，请重试');
+    }
+  };
+
+  const handleAddCancel = () => {
+    setShowAddModal(false);
   };
 
   // 处理编辑分类
   const handleEditCategory = (category: Category) => {
     console.log('Edit category button pressed for:', category.name);
-    Alert.prompt(
-      '编辑分类',
-      '请修改分类名称',
-      [
-        { text: '取消', style: 'cancel' },
-        {
-          text: '保存',
-          onPress: async (value) => {
-            console.log('Edit category onPress called with value:', value);
-            if (!value?.trim()) {
-              Alert.alert('错误', '分类名称不能为空');
-              return;
-            }
-            
-            if (value.trim() === category.name) {
-              return; // 没有变化
-            }
-            
-            try {
-              console.log('Updating category:', category.id, 'with name:', value.trim());
-              const result = await apiClient.updateCategory(category.id, { name: value.trim() });
-              console.log('Category updated:', result);
-              await refetch();
-              Alert.alert('成功', '分类更新成功');
-            } catch (error) {
-              console.error('Update category error:', error);
-              Alert.alert('编辑失败', error instanceof Error ? error.message : '编辑分类失败，请重试');
-            }
-          },
-        },
-      ],
-      'plain-text',
-      category.name
-    );
+    setEditingCategory(category);
+    setShowEditModal(true);
+  };
+
+  const handleEditConfirm = async (value: string) => {
+    console.log('Edit category onPress called with value:', value);
+    if (!editingCategory || !value?.trim()) {
+      Alert.alert('错误', '分类名称不能为空');
+      return;
+    }
+    
+    if (value.trim() === editingCategory.name) {
+      setShowEditModal(false);
+      setEditingCategory(null);
+      return; // 没有变化
+    }
+    
+    try {
+      console.log('Updating category:', editingCategory.id, 'with name:', value.trim());
+      const result = await apiClient.updateCategory(editingCategory.id, { name: value.trim() });
+      console.log('Category updated:', result);
+      await refetch();
+      Alert.alert('成功', '分类更新成功');
+      setShowEditModal(false);
+      setEditingCategory(null);
+    } catch (error) {
+      console.error('Update category error:', error);
+      Alert.alert('编辑失败', error instanceof Error ? error.message : '编辑分类失败，请重试');
+    }
+  };
+
+  const handleEditCancel = () => {
+    setShowEditModal(false);
+    setEditingCategory(null);
   };
 
   // 处理删除分类
@@ -297,6 +297,28 @@ export default function CategoriesScreen() {
             showsVerticalScrollIndicator={false}
           />
         </View>
+
+        {/* 添加分类模态框 */}
+        <InputModal
+          visible={showAddModal}
+          title="新增分类"
+          message="请输入分类名称"
+          placeholder="例如：蔬菜、水果"
+          defaultValue=""
+          onConfirm={handleAddConfirm}
+          onCancel={handleAddCancel}
+        />
+
+        {/* 编辑分类模态框 */}
+        <InputModal
+          visible={showEditModal}
+          title="编辑分类"
+          message="请修改分类名称"
+          placeholder="例如：蔬菜、水果"
+          defaultValue={editingCategory?.name || ""}
+          onConfirm={handleEditConfirm}
+          onCancel={handleEditCancel}
+        />
       </SafeAreaView>
     </Layout>
   );

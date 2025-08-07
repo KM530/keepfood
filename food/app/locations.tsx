@@ -8,6 +8,7 @@ import { Layout } from '@/components/ui/Layout';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Loading } from '@/components/ui/Loading';
+import { InputModal } from '@/components/ui/InputModal';
 import { useLocations } from '@/hooks/useLocations';
 import { apiClient } from '@/lib/api';
 import type { Location } from '@/types';
@@ -16,74 +17,73 @@ export default function LocationsScreen() {
   const { theme } = useTheme();
   const { locations, loading, refetch } = useLocations();
   const [deleting, setDeleting] = useState<Set<number>>(new Set());
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingLocation, setEditingLocation] = useState<Location | null>(null);
 
   // 处理添加新位置
   const handleAddLocation = () => {
-    Alert.prompt(
-      '新增位置',
-      '请输入位置名称',
-      [
-        { text: '取消', style: 'cancel' },
-        {
-          text: '添加',
-          onPress: async (value) => {
-            if (!value?.trim()) {
-              Alert.alert('错误', '位置名称不能为空');
-              return;
-            }
-            
-            try {
-              console.log('Creating location:', value.trim());
-              const result = await apiClient.createLocation({ name: value.trim() });
-              console.log('Location created:', result);
-              await refetch();
-              Alert.alert('成功', '位置添加成功');
-            } catch (error) {
-              console.error('Create location error:', error);
-              Alert.alert('添加失败', error instanceof Error ? error.message : '添加位置失败，请重试');
-            }
-          },
-        },
-      ],
-      'plain-text'
-    );
+    setShowAddModal(true);
+  };
+
+  const handleAddConfirm = async (value: string) => {
+    if (!value?.trim()) {
+      Alert.alert('错误', '位置名称不能为空');
+      return;
+    }
+    
+    try {
+      console.log('Creating location:', value.trim());
+      const result = await apiClient.createLocation({ name: value.trim() });
+      console.log('Location created:', result);
+      await refetch();
+      Alert.alert('成功', '位置添加成功');
+      setShowAddModal(false);
+    } catch (error) {
+      console.error('Create location error:', error);
+      Alert.alert('添加失败', error instanceof Error ? error.message : '添加位置失败，请重试');
+    }
+  };
+
+  const handleAddCancel = () => {
+    setShowAddModal(false);
   };
 
   // 处理编辑位置
   const handleEditLocation = (location: Location) => {
-    Alert.prompt(
-      '编辑位置',
-      '请修改位置名称',
-      [
-        { text: '取消', style: 'cancel' },
-        {
-          text: '保存',
-          onPress: async (value) => {
-            if (!value?.trim()) {
-              Alert.alert('错误', '位置名称不能为空');
-              return;
-            }
-            
-            if (value.trim() === location.name) {
-              return; // 没有变化
-            }
-            
-            try {
-              console.log('Updating location:', location.id, 'with name:', value.trim());
-              const result = await apiClient.updateLocation(location.id, { name: value.trim() });
-              console.log('Location updated:', result);
-              await refetch();
-              Alert.alert('成功', '位置更新成功');
-            } catch (error) {
-              console.error('Update location error:', error);
-              Alert.alert('编辑失败', error instanceof Error ? error.message : '编辑位置失败，请重试');
-            }
-          },
-        },
-      ],
-      'plain-text',
-      location.name
-    );
+    setEditingLocation(location);
+    setShowEditModal(true);
+  };
+
+  const handleEditConfirm = async (value: string) => {
+    if (!editingLocation || !value?.trim()) {
+      Alert.alert('错误', '位置名称不能为空');
+      return;
+    }
+    
+    if (value.trim() === editingLocation.name) {
+      setShowEditModal(false);
+      setEditingLocation(null);
+      return; // 没有变化
+    }
+    
+    try {
+      console.log('Updating location:', editingLocation.id, 'with name:', value.trim());
+      const result = await apiClient.updateLocation(editingLocation.id, { name: value.trim() });
+      console.log('Location updated:', result);
+      await refetch();
+      Alert.alert('成功', '位置更新成功');
+      setShowEditModal(false);
+      setEditingLocation(null);
+    } catch (error) {
+      console.error('Update location error:', error);
+      Alert.alert('编辑失败', error instanceof Error ? error.message : '编辑位置失败，请重试');
+    }
+  };
+
+  const handleEditCancel = () => {
+    setShowEditModal(false);
+    setEditingLocation(null);
   };
 
   // 处理删除位置
@@ -280,6 +280,28 @@ export default function LocationsScreen() {
             showsVerticalScrollIndicator={false}
           />
         </View>
+
+        {/* 添加位置模态框 */}
+        <InputModal
+          visible={showAddModal}
+          title="新增位置"
+          message="请输入位置名称"
+          placeholder="例如：冰箱、橱柜"
+          defaultValue=""
+          onConfirm={handleAddConfirm}
+          onCancel={handleAddCancel}
+        />
+
+        {/* 编辑位置模态框 */}
+        <InputModal
+          visible={showEditModal}
+          title="编辑位置"
+          message="请修改位置名称"
+          placeholder="例如：冰箱、橱柜"
+          defaultValue={editingLocation?.name || ""}
+          onConfirm={handleEditConfirm}
+          onCancel={handleEditCancel}
+        />
       </SafeAreaView>
     </Layout>
   );

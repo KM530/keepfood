@@ -21,7 +21,15 @@ export default function RecipesScreen() {
   // 获取即将过期的食物
   const expiringFoods = foods.filter(food => {
     const status = getFoodStatus(food.expiryDate);
+    console.log(`Food: ${food.name}, Expiry: ${food.expiryDate}, Status: ${status}`);
     return status === 'expiring_soon' || status === 'expired';
+  });
+
+  // 调试信息
+  console.log(`Total foods: ${foods.length}`);
+  console.log(`Expiring foods: ${expiringFoods.length}`);
+  foods.forEach(food => {
+    console.log(`Food: ${food.name}, Expiry: ${food.expiryDate}, Status: ${getFoodStatus(food.expiryDate)}`);
   });
 
   // 处理食物选择

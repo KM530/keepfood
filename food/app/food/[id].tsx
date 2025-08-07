@@ -8,6 +8,7 @@ import { Layout } from '@/components/ui/Layout';
 import { Loading } from '@/components/ui/Loading';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
+import { InputModal } from '@/components/ui/InputModal';
 import { apiClient } from '@/lib/api';
 import { formatDate, formatRelativeDate, getFoodStatus } from '@/utils/date';
 import type { Food } from '@/types';
@@ -20,6 +21,7 @@ export default function FoodDetailScreen() {
   const [error, setError] = useState<string | null>(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [imageLoadErrors, setImageLoadErrors] = useState<Set<string>>(new Set());
+  const [showConsumeModal, setShowConsumeModal] = useState(false);
   const screenWidth = Dimensions.get('window').width;
 
   // 获取食物详情
@@ -103,45 +105,49 @@ export default function FoodDetailScreen() {
   }, [food]);
 
   // 消费食物
-  const handleConsume = useCallback(async () => {
+  const handleConsume = useCallback(() => {
     if (!food) return;
+    setShowConsumeModal(true);
+  }, [food]);
 
-    Alert.prompt(
-      '消费食物',
-      `请输入消费的数量（当前剩余：${food.quantity}${food.unit || ''}）`,
-      [
-        { text: '取消', style: 'cancel' },
-        {
-          text: '确定',
-          onPress: async (value) => {
-            if (!value) return;
-            
-            const consumeQuantity = parseFloat(value);
-            if (isNaN(consumeQuantity) || consumeQuantity <= 0) {
-              Alert.alert('错误', '请输入有效的数量');
-              return;
-            }
+  const handleConsumeConfirm = useCallback(async (value: string) => {
+    if (!food || !value) return;
+    
+    const consumeQuantity = parseFloat(value);
+    if (isNaN(consumeQuantity) || consumeQuantity <= 0) {
+      Alert.alert('错误', '请输入有效的数量');
+      return;
+    }
 
-            if (consumeQuantity > food.quantity) {
-              Alert.alert('错误', '消费数量不能超过剩余数量');
-              return;
-            }
+    if (consumeQuantity > food.quantity) {
+      Alert.alert('错误', '消费数量不能超过剩余数量');
+      return;
+    }
 
-            try {
-              await apiClient.consumeFood(food.id, { quantity: consumeQuantity });
-              Alert.alert('消费成功', '食物数量已更新');
-              fetchFoodDetail(); // 重新获取数据
-            } catch (err) {
-              Alert.alert('消费失败', err instanceof Error ? err.message : '消费食物失败');
-            }
-          },
-        },
-      ],
-      'plain-text',
-      '',
-      'numeric'
-    );
+    try {
+      console.log('Consuming food:', food.id, 'with quantity:', consumeQuantity);
+      console.log('Request data:', { quantity: consumeQuantity });
+      
+      const result = await apiClient.consumeFood(food.id, { quantity: consumeQuantity });
+      console.log('Consume result:', result);
+      Alert.alert('消费成功', '食物数量已更新');
+      fetchFoodDetail(); // 重新获取数据
+      setShowConsumeModal(false);
+    } catch (err) {
+      console.error('Consume food error:', err);
+      console.error('Error details:', {
+        message: err instanceof Error ? err.message : 'Unknown error',
+        code: (err as any)?.code,
+        status: (err as any)?.status,
+        response: (err as any)?.response
+      });
+      Alert.alert('消费失败', err instanceof Error ? err.message : '消费食物失败');
+    }
   }, [food, fetchFoodDetail]);
+
+  const handleConsumeCancel = useCallback(() => {
+    setShowConsumeModal(false);
+  }, []);
 
   // 获取状态信息
   const getStatusInfo = (food: Food) => {
@@ -496,6 +502,17 @@ export default function FoodDetailScreen() {
             variant="outline"
           />
         </View>
+
+        {/* 消费数量输入模态框 */}
+        <InputModal
+          visible={showConsumeModal}
+          title="消费食物"
+          message={`请输入消费的数量（当前剩余：${food?.quantity}${food?.unit || ''}）`}
+          placeholder="请输入数量"
+          defaultValue=""
+          onConfirm={handleConsumeConfirm}
+          onCancel={handleConsumeCancel}
+        />
       </SafeAreaView>
     </Layout>
   );

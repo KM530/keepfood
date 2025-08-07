@@ -97,16 +97,25 @@ def get_foods():
                 food_dict['location_name'] = food.location.name
             
             # 添加状态信息
+            food_dict['status'] = food.status
             food_dict['status_display'] = get_food_status_display(food.expiry_date)
+            food_dict['days_until_expiry'] = food.days_until_expiry
             
             # 处理图片URL
             if food_dict.get('image_url'):
                 if isinstance(food_dict['image_url'], list):
-                    food_dict['image_url'] = [
-                        get_file_url(img, 'foods') for img in food_dict['image_url']
-                    ]
+                    # 过滤掉空值并转换为URL
+                    valid_images = [img for img in food_dict['image_url'] if img]
+                    if valid_images:
+                        food_dict['image_url'] = [
+                            get_file_url(img, 'foods') for img in valid_images
+                        ]
+                    else:
+                        food_dict['image_url'] = None
                 else:
                     food_dict['image_url'] = get_file_url(food_dict['image_url'], 'foods')
+            else:
+                food_dict['image_url'] = None
             
             foods_data.append(food_dict)
         
@@ -158,11 +167,18 @@ def get_food(food_id):
         # 处理图片URL
         if food_dict.get('image_url'):
             if isinstance(food_dict['image_url'], list):
-                food_dict['image_url'] = [
-                    get_file_url(img, 'foods') for img in food_dict['image_url']
-                ]
+                # 过滤掉空值并转换为URL
+                valid_images = [img for img in food_dict['image_url'] if img]
+                if valid_images:
+                    food_dict['image_url'] = [
+                        get_file_url(img, 'foods') for img in valid_images
+                    ]
+                else:
+                    food_dict['image_url'] = None
             else:
                 food_dict['image_url'] = get_file_url(food_dict['image_url'], 'foods')
+        else:
+            food_dict['image_url'] = None
         
         return success_response(food_dict, '获取食物详情成功')
 
