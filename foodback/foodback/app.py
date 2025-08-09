@@ -74,12 +74,15 @@ def register_blueprints(app):
     app.register_blueprint(api.foods_blueprint, url_prefix='/api')
     app.register_blueprint(api.ocr_blueprint)
     app.register_blueprint(api.nutrition_blueprint)
-    app.register_blueprint(api.recipes_blueprint)
     app.register_blueprint(api.push_blueprint)
     
     # AI分析API
     from .api.ai_analysis import blueprint as ai_analysis_blueprint
     app.register_blueprint(ai_analysis_blueprint, url_prefix='/api')
+    
+    # 菜谱生成API
+    from .api.recipes import blueprint as recipes_blueprint
+    app.register_blueprint(recipes_blueprint, url_prefix='/api')
     
     return None
 

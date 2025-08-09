@@ -50,11 +50,14 @@ class HTTPClientImpl implements HTTPClient {
   private token: string | null = null;
   private requestInterceptors: RequestInterceptor[] = [];
   private responseInterceptors: ResponseInterceptor[] = [];
+  private baseOrigin: string; // 新增：用于静态资源
 
   constructor(config: APIClientConfig) {
     this.baseURL = config.baseURL;
     this.timeout = config.timeout;
     this.defaultHeaders = { ...config.headers };
+    // 从API基础地址提取主机地址（去掉/api）
+    this.baseOrigin = this.baseURL.replace(/\/?api\/?$/, '');
     
     // 从存储中加载token（异步，但不等待）
     this.loadToken().catch(console.warn);
@@ -396,9 +399,12 @@ class HTTPClientImpl implements HTTPClient {
 
 class APIClientImpl implements APIClient {
   private http: HTTPClient;
+  private baseOrigin: string; // 用于静态资源URL构建
 
   constructor(config: APIClientConfig) {
     this.http = new HTTPClientImpl(config);
+    // 从配置的baseURL中抽取主机（去掉/api）
+    this.baseOrigin = config.baseURL.replace(/\/?api\/?$/, '');
     this.setupInterceptors();
   }
 
@@ -519,15 +525,26 @@ class APIClientImpl implements APIClient {
     if (!imageUrl) {
       return undefined;
     }
+
+    const buildFullUrl = (val?: string): string | undefined => {
+      if (!val) return undefined;
+      // 已是完整URL
+      if (/^https?:\/\//i.test(val)) return val;
+      // 标准化路径
+      const normalized = /^\/?static\//.test(val)
+        ? val.replace(/^\//, '')
+        : `static/uploads/foods/${val}`;
+      return `${this.baseOrigin}/${normalized}`;
+    };
     
-    // 如果是数组，取第一个图片
+    // 如果是数组，取第一张并构造URL
     if (Array.isArray(imageUrl)) {
-      return imageUrl.length > 0 ? imageUrl[0] : undefined;
+      return buildFullUrl(imageUrl.length > 0 ? imageUrl[0] : undefined);
     }
     
-    // 如果是字符串，直接返回
+    // 如果是字符串，构造URL
     if (typeof imageUrl === 'string') {
-      return imageUrl;
+      return buildFullUrl(imageUrl);
     }
     
     return undefined;
@@ -659,8 +676,8 @@ class APIClientImpl implements APIClient {
   }
 
   async generateRecipes(data: GenerateRecipesRequest): Promise<Recipe[]> {
-    const response = await this.http.post('/ai/generate-recipes', data);
-    return response.body;
+    const response = await this.http.post('/recipes/generate', data);
+    return response.body.recipes || [];
   }
 
   // ============= 推送相关 =============
@@ -677,8 +694,8 @@ class APIClientImpl implements APIClient {
 // ============= 配置和导出 =============
 
 const API_CONFIG: APIClientConfig = {
-  // baseURL: __DEV__ ? 'http://localhost:5000/api' : 'https://api.foodmanager.com/api',
-  baseURL: __DEV__ ? 'http://192.168.1.114:5001/api' : 'https://api.foodmanager.com/api',
+  // baseURL: __DEV__ ? 'http://localhost:5001/api' : 'https://api.foodmanager.com/api',
+  baseURL: __DEV__ ? 'http://food.mentalnest.cn/api' : 'https://food.mentalnest.cn/api',
   timeout: 120000, // 2分钟超时，适应AI分析的长时间处理
   headers: {
     'Accept': 'application/json',

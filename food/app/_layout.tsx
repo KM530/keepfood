@@ -26,6 +26,17 @@ export default function RootLayout() {
           <Stack.Screen name="login" options={{ headerShown: false }} />
           <Stack.Screen name="register" options={{ headerShown: false }} />
           <Stack.Screen name="+not-found" />
+          <Stack.Screen 
+              name="food/[id]" 
+              options={{ 
+                // 方案A: 隐藏这个由根Stack生成的Header，让你在 food/[id].js 内部自定义的Header显示
+                headerShown: false,
+
+                // 方案B: 使用这个根Stack生成的Header，并在这里统一配置样式
+                // title: '食物详情', 
+                // presentation: 'modal', // 还可以设置弹出方式等
+              }} 
+            />
         </Stack>
         <StatusBar style="auto" />
       </ThemeProvider>

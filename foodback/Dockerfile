@@ -43,7 +43,7 @@ COPY supervisord_programs /etc/supervisor/conf.d
 
 COPY . .
 
-EXPOSE 5000
+EXPOSE 5001
 ENTRYPOINT ["/bin/bash", "shell_scripts/supervisord_entrypoint.sh"]
 CMD ["-c", "/etc/supervisor/supervisord.conf"]
 
@@ -52,5 +52,5 @@ CMD ["-c", "/etc/supervisor/supervisord.conf"]
 FROM builder AS development
 RUN pip install --no-cache -r requirements/dev.txt
 EXPOSE 2992
-EXPOSE 5000
+EXPOSE 5001
 CMD [ "npm", "start" ]

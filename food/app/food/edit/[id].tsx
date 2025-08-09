@@ -97,7 +97,13 @@ export default function EditFoodScreen() {
         expiryDate: response.expiry_date,
         categoryId: response.category_id,
         locationId: response.location_id,
-        images: response.image_url || [],
+        images: (response.image_url || []).map(url => {
+          // 如果是网络URL，需要转换为本地URI格式
+          if (url.startsWith('http')) {
+            return url; // 暂时保持原样，后续会修复MultiImagePicker
+          }
+          return url;
+        }),
         productionDate: response.production_date || '',
         shelfLifeValue: response.shelf_life_value?.toString() || '',
         shelfLifeUnit: response.shelf_life_unit || 'day',
@@ -341,16 +347,22 @@ export default function EditFoodScreen() {
       }
 
       // 处理图片上传
-      for (const imageUri of formData.images) {
-        const filename = imageUri.split('/').pop() || 'image.jpg';
-        const match = /\.(\w+)$/.exec(filename);
-        const type = match ? `image/${match[1]}` : 'image/jpeg';
-        formDataToSend.append('images', {
-          uri: imageUri,
-          name: filename,
-          type,
-        } as any);
-      }
+      // for (const imageUri of formData.images) {
+      //   // 如果是网络URL，跳过上传（保持原有图片）
+      //   if (imageUri.startsWith('http')) {
+      //     continue;
+      //   }
+        
+      //   // 只上传新选择的本地图片
+      //   const filename = imageUri.split('/').pop() || 'image.jpg';
+      //   const match = /\.(\w+)$/.exec(filename);
+      //   const type = match ? `image/${match[1]}` : 'image/jpeg';
+      //   formDataToSend.append('images', {
+      //     uri: imageUri,
+      //     name: filename,
+      //     type,
+      //   } as any);
+      // }
 
       await apiClient.updateFood(parseInt(id), formDataToSend as any);
       Alert.alert('更新成功', '食物信息已更新', [
@@ -440,7 +452,12 @@ export default function EditFoodScreen() {
           {/* 食物图片 */}
           <Card style={styles.section}>
             <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>食物图片</Text>
-            <MultiImagePicker value={formData.images} onImagesSelected={handleImagesSelected} maxImages={5} />
+            <MultiImagePicker 
+              value={formData.images} 
+              onImagesSelected={handleImagesSelected} 
+              maxImages={5}
+              readonly={false} // 编辑模式下允许修改图片
+            />
           </Card>
 
           {/* 基本信息 */}

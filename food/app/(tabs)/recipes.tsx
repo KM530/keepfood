@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, FlatList, Image, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, FlatList, Image, Alert, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -9,7 +9,15 @@ import { Button } from '@/components/ui/Button';
 import { Loading } from '@/components/ui/Loading';
 import { useFoodList } from '@/hooks/useFoodList';
 import { formatRelativeDate, getFoodStatus } from '@/utils/date';
-import type { FoodListItem, Recipe } from '@/types';
+import type { FoodListItem } from '@/types';
+
+interface Recipe {
+  name: string;
+  ingredients: string[];
+  video_url: string;
+  matched_ingredients: string[];
+  missing_ingredients: string[];
+}
 
 export default function RecipesScreen() {
   const { theme } = useTheme();
@@ -21,15 +29,20 @@ export default function RecipesScreen() {
   // 获取即将过期的食物
   const expiringFoods = foods.filter(food => {
     const status = getFoodStatus(food.expiryDate);
-    console.log(`Food: ${food.name}, Expiry: ${food.expiryDate}, Status: ${status}`);
+    console.log('🔍 食物状态检查:', {
+      name: food.name,
+      expiryDate: food.expiryDate,
+      status: status,
+      isExpiring: status === 'expiring_soon' || status === 'expired'
+    });
     return status === 'expiring_soon' || status === 'expired';
   });
 
   // 调试信息
-  console.log(`Total foods: ${foods.length}`);
-  console.log(`Expiring foods: ${expiringFoods.length}`);
-  foods.forEach(food => {
-    console.log(`Food: ${food.name}, Expiry: ${food.expiryDate}, Status: ${getFoodStatus(food.expiryDate)}`);
+  console.log('📊 菜谱页面数据统计:', {
+    totalFoods: foods.length,
+    expiringFoods: expiringFoods.length,
+    selectedFoods: selectedFoods.size
   });
 
   // 处理食物选择
@@ -64,42 +77,23 @@ export default function RecipesScreen() {
     setGeneratingRecipes(true);
     try {
       const { apiClient } = await import('@/lib/api');
-      const response = await apiClient.post('/recipes/generate', {
-        food_ids: Array.from(selectedFoods),
-        preferences: {
-          cuisine: 'all',
-          difficulty: 'all',
-          cooking_time: 'all'
-        }
+      
+      // 获取选中食物的名称
+      const selectedFoodNames = foods
+        .filter(food => selectedFoods.has(food.id))
+        .map(food => food.name);
+      
+      console.log('🍳 准备生成菜谱，食材:', selectedFoodNames);
+      
+      const recipes = await apiClient.generateRecipes({
+        food_names: selectedFoodNames
       });
 
-      const result = response.data;
-      
-      // 转换API返回的数据格式到前端类型
-      const convertedRecipes: Recipe[] = result.recipes.map((recipe: any) => ({
-        id: recipe.id,
-        title: recipe.name,
-        description: recipe.description,
-        ingredients: recipe.ingredients.map((ing: any) => 
-          `${ing.name} ${ing.amount}${ing.unit}`
-        ),
-        steps: recipe.steps,
-        cookingTime: recipe.cooking_time,
-        difficulty: recipe.difficulty === '简单' ? 'easy' as const : 
-                   recipe.difficulty === '中等' ? 'medium' as const : 'hard' as const,
-        nutrition: {
-          calories: Math.round(recipe.nutrition.calories),
-          protein: Math.round(recipe.nutrition.protein),
-          carbs: Math.round(recipe.nutrition.carbs),
-          fat: Math.round(recipe.nutrition.fat)
-        }
-      }));
-
-      setRecipes(convertedRecipes);
+      setRecipes(recipes);
       
       Alert.alert(
         '生成完成',
-        `为您生成了 ${result.total_recipes} 道菜谱，总计 ${result.nutrition_analysis.total_nutrition.calories.toFixed(0)} 卡路里`
+        `为您生成了 ${recipes.length} 道菜谱`
       );
     } catch (error) {
       console.error('Failed to generate recipes:', error);
@@ -107,36 +101,32 @@ export default function RecipesScreen() {
       // 如果API调用失败，回退到模拟数据
       const selectedFoodList = foods.filter(food => selectedFoods.has(food.id));
       const mockRecipes: Recipe[] = selectedFoodList.slice(0, 2).map((food, index) => ({
-        id: index + 1,
-        title: `${food.name}特色料理`,
-        description: `使用${food.name}制作的美味家常菜`,
-        ingredients: [
-          `${food.name} ${Math.min(food.quantity, 200)}${food.unit || 'g'}`,
-          '盐 适量',
-          '油 15ml',
-          '生抽 10ml'
-        ],
-        steps: [
-          `将${food.name}洗净切好备用`,
-          '热锅下油，爆香葱姜蒜',
-          `下${food.name}炒制至半熟`,
-          '加入调料炒匀',
-          '出锅装盘即可'
-        ],
-        cookingTime: 15,
-        difficulty: 'easy',
-        nutrition: {
-          calories: 150 + Math.floor(Math.random() * 100),
-          protein: 8 + Math.floor(Math.random() * 10),
-          carbs: 12 + Math.floor(Math.random() * 15),
-          fat: 5 + Math.floor(Math.random() * 8)
-        }
+        name: `${food.name}特色料理`,
+        ingredients: [food.name, '盐', '油', '生抽'],
+        video_url: 'https://www.bilibili.com/video/BV1ttKxzQEBD',
+        matched_ingredients: [food.name],
+        missing_ingredients: ['盐', '油', '生抽']
       }));
       
       setRecipes(mockRecipes);
       Alert.alert('生成完成', `为您生成了 ${mockRecipes.length} 道菜谱（使用备用方案）`);
     } finally {
       setGeneratingRecipes(false);
+    }
+  };
+
+  // 打开视频链接
+  const handleOpenVideo = async (videoUrl: string) => {
+    try {
+      const supported = await Linking.canOpenURL(videoUrl);
+      if (supported) {
+        await Linking.openURL(videoUrl);
+      } else {
+        Alert.alert('错误', '无法打开视频链接');
+      }
+    } catch (error) {
+      console.error('Failed to open video:', error);
+      Alert.alert('错误', '打开视频失败');
     }
   };
 
@@ -159,7 +149,7 @@ export default function RecipesScreen() {
         onPress={() => handleFoodSelect(item.id)}
       >
         {item.imageUrl && (
-          <Image source={{ uri: item.imageUrl }} style={styles.foodImage} />
+          <Image source={{ uri: Array.isArray(item.imageUrl) ? item.imageUrl[0] : item.imageUrl }} style={styles.foodImage} />
         )}
         <View style={styles.foodInfo}>
           <Text style={[styles.foodName, { color: theme.colors.text }]}>
@@ -186,28 +176,16 @@ export default function RecipesScreen() {
     <Card style={styles.recipeCard}>
       <View style={styles.recipeHeader}>
         <Text style={[styles.recipeTitle, { color: theme.colors.text }]}>
-          {item.title}
+          {item.name}
         </Text>
-        <View style={styles.recipeInfo}>
-          <View style={styles.recipeInfoItem}>
-            <Ionicons name="time-outline" size={16} color={theme.colors.textSecondary} />
-            <Text style={[styles.recipeInfoText, { color: theme.colors.textSecondary }]}>
-              {item.cookingTime}分钟
-            </Text>
-          </View>
-          <View style={styles.recipeInfoItem}>
-            <Ionicons name="restaurant-outline" size={16} color={theme.colors.textSecondary} />
-            <Text style={[styles.recipeInfoText, { color: theme.colors.textSecondary }]}>
-              {item.difficulty === 'easy' ? '简单' : item.difficulty === 'medium' ? '中等' : '困难'}
-            </Text>
-          </View>
-        </View>
+        <TouchableOpacity
+          style={styles.videoButton}
+          onPress={() => handleOpenVideo(item.video_url)}
+        >
+          <Ionicons name="play-circle" size={24} color={theme.colors.primary} />
+        </TouchableOpacity>
       </View>
       
-      <Text style={[styles.recipeDescription, { color: theme.colors.textSecondary }]}>
-        {item.description}
-      </Text>
-
       <View style={styles.recipeIngredients}>
         <Text style={[styles.recipeSection, { color: theme.colors.text }]}>
           所需食材：
@@ -223,31 +201,43 @@ export default function RecipesScreen() {
         </View>
       </View>
 
-      {item.nutrition && (
-        <View style={styles.nutritionInfo}>
-          <Text style={[styles.recipeSection, { color: theme.colors.text }]}>
-            营养信息：
+      {item.matched_ingredients.length > 0 && (
+        <View style={styles.matchedIngredients}>
+          <Text style={[styles.recipeSection, { color: '#4CAF50' }]}>
+            ✅ 匹配的食材：
           </Text>
-          <View style={styles.nutritionGrid}>
-            <Text style={[styles.nutritionItem, { color: theme.colors.textSecondary }]}>
-              卡路里: {item.nutrition.calories}
-            </Text>
-            <Text style={[styles.nutritionItem, { color: theme.colors.textSecondary }]}>
-              蛋白质: {item.nutrition.protein}g
-            </Text>
-            <Text style={[styles.nutritionItem, { color: theme.colors.textSecondary }]}>
-              碳水: {item.nutrition.carbs}g
-            </Text>
-            <Text style={[styles.nutritionItem, { color: theme.colors.textSecondary }]}>
-              脂肪: {item.nutrition.fat}g
-            </Text>
+          <View style={styles.ingredientsList}>
+            {item.matched_ingredients.map((ingredient, index) => (
+              <View key={index} style={[styles.ingredientTag, { backgroundColor: '#E8F5E8' }]}>
+                <Text style={[styles.ingredientText, { color: '#4CAF50' }]}>
+                  {ingredient}
+                </Text>
+              </View>
+            ))}
+          </View>
+        </View>
+      )}
+
+      {item.missing_ingredients.length > 0 && (
+        <View style={styles.missingIngredients}>
+          <Text style={[styles.recipeSection, { color: '#FF9800' }]}>
+            ⚠️ 缺少的食材：
+          </Text>
+          <View style={styles.ingredientsList}>
+            {item.missing_ingredients.map((ingredient, index) => (
+              <View key={index} style={[styles.ingredientTag, { backgroundColor: '#FFF3E0' }]}>
+                <Text style={[styles.ingredientText, { color: '#FF9800' }]}>
+                  {ingredient}
+                </Text>
+              </View>
+            ))}
           </View>
         </View>
       )}
 
       <Button
-        title="查看详细步骤"
-        onPress={() => Alert.alert('菜谱详情', item.steps.map((step, index) => `${index + 1}. ${step}`).join('\n\n'))}
+        title="观看视频教程"
+        onPress={() => handleOpenVideo(item.video_url)}
         variant="outline"
         style={styles.recipeButton}
       />
@@ -335,8 +325,8 @@ export default function RecipesScreen() {
               <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
                 推荐菜谱 ({recipes.length})
               </Text>
-              {recipes.map((recipe) => (
-                <View key={recipe.id}>
+              {recipes.map((recipe, index) => (
+                <View key={index}>
                   {renderRecipeItem({ item: recipe })}
                 </View>
               ))}
@@ -471,29 +461,18 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   recipeHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     marginBottom: 8,
   },
   recipeTitle: {
     fontSize: 20,
     fontWeight: '700',
-    marginBottom: 8,
+    flex: 1,
   },
-  recipeInfo: {
-    flexDirection: 'row',
-    gap: 16,
-  },
-  recipeInfoItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  recipeInfoText: {
-    fontSize: 14,
-  },
-  recipeDescription: {
-    fontSize: 14,
-    lineHeight: 20,
-    marginBottom: 16,
+  videoButton: {
+    padding: 4,
   },
   recipeSection: {
     fontSize: 16,
@@ -501,7 +480,13 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   recipeIngredients: {
-    marginBottom: 16,
+    marginBottom: 12,
+  },
+  matchedIngredients: {
+    marginBottom: 12,
+  },
+  missingIngredients: {
+    marginBottom: 12,
   },
   ingredientsList: {
     flexDirection: 'row',
@@ -515,17 +500,6 @@ const styles = StyleSheet.create({
   },
   ingredientText: {
     fontSize: 12,
-  },
-  nutritionInfo: {
-    marginBottom: 16,
-  },
-  nutritionGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 16,
-  },
-  nutritionItem: {
-    fontSize: 14,
   },
   recipeButton: {
     marginTop: 8,

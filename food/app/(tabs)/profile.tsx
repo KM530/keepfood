@@ -64,24 +64,24 @@ export default function ProfileScreen() {
           subtitle: '管理存放位置',
           onPress: () => router.push('/locations'),
         },
-        {
-          icon: 'scan-outline',
-          title: '配料识别',
-          subtitle: 'OCR识别配料表',
-          onPress: () => router.push('/ocr'),
-        },
-        {
-          icon: 'nutrition-outline',
-          title: '营养分析',
-          subtitle: '卡路里和营养计算',
-          onPress: () => router.push('/nutrition'),
-        },
-        {
-          icon: 'analytics-outline',
-          title: '统计报告',
-          subtitle: '查看使用统计',
-          onPress: () => Alert.alert('提示', '统计报告功能开发中...'),
-        },
+        // {
+        //   icon: 'scan-outline',
+        //   title: '配料识别',
+        //   subtitle: 'OCR识别配料表',
+        //   onPress: () => router.push('/ocr'),
+        // },
+        // {
+        //   icon: 'nutrition-outline',
+        //   title: '营养分析',
+        //   subtitle: '卡路里和营养计算',
+        //   onPress: () => router.push('/nutrition'),
+        // },
+        // {
+        //   icon: 'analytics-outline',
+        //   title: '统计报告',
+        //   subtitle: '查看使用统计',
+        //   onPress: () => Alert.alert('提示', '统计报告功能开发中...'),
+        // },
       ],
     },
     {
@@ -99,12 +99,12 @@ export default function ProfileScreen() {
           subtitle: '深色/浅色模式',
           onPress: () => router.push('/theme-settings'),
         },
-        {
-          icon: 'language-outline',
-          title: '语言设置',
-          subtitle: '界面语言',
-          onPress: () => router.push('/language-settings'),
-        },
+        // {
+        //   icon: 'language-outline',
+        //   title: '语言设置',
+        //   subtitle: '界面语言',
+        //   onPress: () => router.push('/language-settings'),
+        // },
       ],
     },
     {
@@ -116,12 +116,12 @@ export default function ProfileScreen() {
           subtitle: '功能介绍和使用指南',
           onPress: () => router.push('/help'),
         },
-        {
-          icon: 'chatbubble-outline',
-          title: '意见反馈',
-          subtitle: '提交建议和问题',
-          onPress: () => Alert.alert('提示', '意见反馈功能开发中...'),
-        },
+        // {
+        //   icon: 'chatbubble-outline',
+        //   title: '意见反馈',
+        //   subtitle: '提交建议和问题',
+        //   onPress: () => Alert.alert('提示', '意见反馈功能开发中...'),
+        // },
         {
           icon: 'information-circle-outline',
           title: '关于应用',

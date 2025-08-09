@@ -9,7 +9,7 @@ import { Loading } from '@/components/ui/Loading';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { InputModal } from '@/components/ui/InputModal';
-import { apiClient } from '@/lib/api';
+import { apiClient, API_CONFIG } from '@/lib/api';
 import { formatDate, formatRelativeDate, getFoodStatus } from '@/utils/date';
 import type { Food } from '@/types';
 
@@ -23,6 +23,9 @@ export default function FoodDetailScreen() {
   const [imageLoadErrors, setImageLoadErrors] = useState<Set<string>>(new Set());
   const [showConsumeModal, setShowConsumeModal] = useState(false);
   const screenWidth = Dimensions.get('window').width;
+
+  // 获取基础主机地址（去掉/api）
+  const BASE_ORIGIN = API_CONFIG.baseURL.replace(/\/?api\/?$/, '');
 
   // 获取食物详情
   const fetchFoodDetail = useCallback(async () => {
@@ -163,11 +166,14 @@ export default function FoodDetailScreen() {
   // 处理图片URL
   const getImageUrl = (filename: string | undefined) => {
     if (!filename) return '';
-    if (filename.startsWith('http')) {
+    if (/^https?:\/\//i.test(filename)) {
       return filename;
     }
-    // 数据库存储的是文件名，需要构建完整的URL路径
-    return `http://192.168.1.114:5001/${filename}`;
+    // 已带static前缀
+    const normalized = /^\/?static\//.test(filename)
+      ? filename.replace(/^\//, '')
+      : `static/uploads/foods/${filename}`;
+    return `${BASE_ORIGIN}/${normalized}`;
   };
 
   // 处理图片滚动
@@ -211,7 +217,7 @@ export default function FoodDetailScreen() {
             <Text style={[styles.errorTitle, { color: theme.colors.error }]}>
               加载失败
             </Text>
-            <Text style={[styles.errorText, { color: theme.colors.textSecondary }]}>
+            <Text style={[styles.errorText, { color: theme.colors.textSecondary }]}> 
               {error || '食物不存在'}
             </Text>
             <Button
@@ -239,7 +245,7 @@ export default function FoodDetailScreen() {
           >
             <Ionicons name="arrow-back" size={24} color={theme.colors.text} />
           </TouchableOpacity>
-          <Text style={[styles.headerTitle, { color: theme.colors.text }]}>
+          <Text style={[styles.headerTitle, { color: theme.colors.text }]}> 
             食物详情
           </Text>
           <TouchableOpacity
@@ -293,7 +299,7 @@ export default function FoodDetailScreen() {
           {/* 基本信息 */}
           <Card style={styles.infoCard}>
             <View style={styles.nameContainer}>
-              <Text style={[styles.foodName, { color: theme.colors.text }]}>
+              <Text style={[styles.foodName, { color: theme.colors.text }]}> 
                 {food.name}
               </Text>
               <View style={[
@@ -305,7 +311,7 @@ export default function FoodDetailScreen() {
                   size={16}
                   color={statusInfo.text}
                 />
-                <Text style={[styles.statusText, { color: statusInfo.text }]}>
+                <Text style={[styles.statusText, { color: statusInfo.text }]}> 
                   {getFoodStatus(food.expiry_date) === 'normal' ? '正常' :
                    getFoodStatus(food.expiry_date) === 'expiring_soon' ? '即将过期' : '已过期'}
                 </Text>
@@ -321,20 +327,20 @@ export default function FoodDetailScreen() {
             <View style={styles.detailRow}>
               <View style={styles.detailItem}>
                 <Ionicons name="layers-outline" size={20} color={theme.colors.textSecondary} />
-                <Text style={[styles.detailLabel, { color: theme.colors.textSecondary }]}>
+                <Text style={[styles.detailLabel, { color: theme.colors.textSecondary }]}> 
                   数量
                 </Text>
-                <Text style={[styles.detailValue, { color: theme.colors.text }]}>
+                <Text style={[styles.detailValue, { color: theme.colors.text }]}> 
                   {food.quantity}{food.unit || ''}
                 </Text>
               </View>
 
               <View style={styles.detailItem}>
                 <Ionicons name="calendar-outline" size={20} color={theme.colors.textSecondary} />
-                <Text style={[styles.detailLabel, { color: theme.colors.textSecondary }]}>
+                <Text style={[styles.detailLabel, { color: theme.colors.textSecondary }]}> 
                   到期时间
                 </Text>
-                <Text style={[styles.detailValue, { color: theme.colors.text }]}>
+                <Text style={[styles.detailValue, { color: theme.colors.text }]}> 
                   {formatDate(food.expiry_date)}
                 </Text>
               </View>
@@ -343,143 +349,143 @@ export default function FoodDetailScreen() {
             <View style={styles.detailRow}>
               <View style={styles.detailItem}>
                 <Ionicons name="pricetag-outline" size={20} color={theme.colors.textSecondary} />
-                <Text style={[styles.detailLabel, { color: theme.colors.textSecondary }]}>
+                <Text style={[styles.detailLabel, { color: theme.colors.textSecondary }]}> 
                   分类
                 </Text>
-                <Text style={[styles.detailValue, { color: theme.colors.text }]}>
+                <Text style={[styles.detailValue, { color: theme.colors.text }]}> 
                   {food.category?.name || '未分类'}
                 </Text>
               </View>
 
               <View style={styles.detailItem}>
                 <Ionicons name="location-outline" size={20} color={theme.colors.textSecondary} />
-                <Text style={[styles.detailLabel, { color: theme.colors.textSecondary }]}>
+                <Text style={[styles.detailLabel, { color: theme.colors.textSecondary }]}> 
                   位置
                 </Text>
-                <Text style={[styles.detailValue, { color: theme.colors.text }]}>
+                <Text style={[styles.detailValue, { color: theme.colors.text }]}> 
                   {food.location?.name || '未设置'}
                 </Text>
               </View>
             </View>
           </Card>
 
-                     {/* 详细信息 */}
-           <Card style={styles.detailCard}>
-             <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
-               详细信息
-             </Text>
-             
-             {/* 生产日期 */}
-             {food.production_date && (
-               <View style={styles.detailRow}>
-                 <View style={styles.detailItem}>
-                   <Ionicons name="calendar-outline" size={20} color={theme.colors.textSecondary} />
-                   <Text style={[styles.detailLabel, { color: theme.colors.textSecondary }]}>
-                     生产日期
-                   </Text>
-                   <Text style={[styles.detailValue, { color: theme.colors.text }]}>
-                     {formatDate(food.production_date)}
-                   </Text>
-                 </View>
-               </View>
-             )}
+          {/* 详细信息 */}
+          <Card style={styles.detailCard}>
+            <Text style={[styles.sectionTitle, { color: theme.colors.text }]}> 
+              详细信息
+            </Text>
+            
+            {/* 生产日期 */}
+            {food.production_date && (
+              <View style={styles.detailRow}>
+                <View style={styles.detailItem}>
+                  <Ionicons name="calendar-outline" size={20} color={theme.colors.textSecondary} />
+                  <Text style={[styles.detailLabel, { color: theme.colors.textSecondary }]}> 
+                    生产日期
+                  </Text>
+                  <Text style={[styles.detailValue, { color: theme.colors.text }]}> 
+                    {formatDate(food.production_date)}
+                  </Text>
+                </View>
+              </View>
+            )}
 
-             {/* 保质期 */}
-             {food.shelf_life_value && food.shelf_life_unit && (
-               <View style={styles.detailRow}>
-                 <View style={styles.detailItem}>
-                   <Ionicons name="time-outline" size={20} color={theme.colors.textSecondary} />
-                   <Text style={[styles.detailLabel, { color: theme.colors.textSecondary }]}>
-                     保质期
-                   </Text>
-                   <Text style={[styles.detailValue, { color: theme.colors.text }]}>
-                     {food.shelf_life_value} {food.shelf_life_unit === 'day' ? '天' : 
-                      food.shelf_life_unit === 'month' ? '月' : '年'}
-                   </Text>
-                 </View>
-               </View>
-             )}
+            {/* 保质期 */}
+            {food.shelf_life_value && food.shelf_life_unit && (
+              <View style={styles.detailRow}>
+                <View style={styles.detailItem}>
+                  <Ionicons name="time-outline" size={20} color={theme.colors.textSecondary} />
+                  <Text style={[styles.detailLabel, { color: theme.colors.textSecondary }]}> 
+                    保质期
+                  </Text>
+                  <Text style={[styles.detailValue, { color: theme.colors.text }]}> 
+                    {food.shelf_life_value} {food.shelf_life_unit === 'day' ? '天' : 
+                     food.shelf_life_unit === 'month' ? '月' : '年'}
+                  </Text>
+                </View>
+              </View>
+            )}
 
-             {/* 配料表 */}
-             {food.ingredients_text && (
-               <View style={styles.detailRow}>
-                 <View style={styles.detailItem}>
-                   <Ionicons name="list-outline" size={20} color={theme.colors.textSecondary} />
-                   <Text style={[styles.detailLabel, { color: theme.colors.textSecondary }]}>
-                     配料表
-                   </Text>
-                   <Text style={[styles.detailValue, { color: theme.colors.text }]}>
-                     {food.ingredients_text}
-                   </Text>
-                 </View>
-               </View>
-             )}
+            {/* 配料表 */}
+            {food.ingredients_text && (
+              <View style={styles.detailRow}>
+                <View style={styles.detailItem}>
+                  <Ionicons name="list-outline" size={20} color={theme.colors.textSecondary} />
+                  <Text style={[styles.detailLabel, { color: theme.colors.textSecondary }]}> 
+                    配料表
+                  </Text>
+                  <Text style={[styles.detailValue, { color: theme.colors.text }]}> 
+                    {food.ingredients_text}
+                  </Text>
+                </View>
+              </View>
+            )}
 
-             {/* 卡路里 */}
-             {food.calories_kcal && (
-               <View style={styles.detailRow}>
-                 <View style={styles.detailItem}>
-                   <Ionicons name="flame-outline" size={20} color={theme.colors.textSecondary} />
-                   <Text style={[styles.detailLabel, { color: theme.colors.textSecondary }]}>
-                     卡路里
-                   </Text>
-                   <Text style={[styles.detailValue, { color: theme.colors.text }]}>
-                     {food.calories_kcal} 千卡
-                   </Text>
-                 </View>
-               </View>
-             )}
+            {/* 卡路里 */}
+            {food.calories_kcal && (
+              <View style={styles.detailRow}>
+                <View style={styles.detailItem}>
+                  <Ionicons name="flame-outline" size={20} color={theme.colors.textSecondary} />
+                  <Text style={[styles.detailLabel, { color: theme.colors.textSecondary }]}> 
+                    卡路里
+                  </Text>
+                  <Text style={[styles.detailValue, { color: theme.colors.text }]}> 
+                    {food.calories_kcal} 千卡
+                  </Text>
+                </View>
+              </View>
+            )}
 
-             {/* 运动消耗建议 */}
-             {food.energy_offset_info && (
-               <View style={styles.detailRow}>
-                 <View style={styles.detailItem}>
-                   <Ionicons name="fitness-outline" size={20} color={theme.colors.textSecondary} />
-                   <Text style={[styles.detailLabel, { color: theme.colors.textSecondary }]}>
-                     运动建议
-                   </Text>
-                   <Text style={[styles.detailValue, { color: theme.colors.text }]}>
-                     {food.energy_offset_info}
-                   </Text>
-                 </View>
-               </View>
-             )}
-           </Card>
+            {/* 运动消耗建议 */}
+            {food.energy_offset_info && (
+              <View style={styles.detailRow}>
+                <View style={styles.detailItem}>
+                  <Ionicons name="fitness-outline" size={20} color={theme.colors.textSecondary} />
+                  <Text style={[styles.detailLabel, { color: theme.colors.textSecondary }]}> 
+                    运动建议
+                  </Text>
+                  <Text style={[styles.detailValue, { color: theme.colors.text }]}> 
+                    {food.energy_offset_info}
+                  </Text>
+                </View>
+              </View>
+            )}
+          </Card>
 
-           {/* 有害成分警告 */}
-           {food.harmful_ingredients_json && food.harmful_ingredients_json.length > 0 && (
-             <Card style={StyleSheet.flatten([styles.warningCard, { backgroundColor: '#FFF3E0' }])}>
-               <View style={styles.warningHeader}>
-                 <Ionicons name="warning" size={20} color="#F57C00" />
-                 <Text style={[styles.warningTitle, { color: '#F57C00' }]}>
-                   有害成分提醒
-                 </Text>
-               </View>
-               <Text style={[styles.warningText, { color: '#E65100' }]}>
-                 {food.harmful_ingredients_json.join('、')}
-               </Text>
-             </Card>
-           )}
+          {/* 有害成分警告 */}
+          {food.harmful_ingredients_json && food.harmful_ingredients_json.length > 0 && (
+            <Card style={StyleSheet.flatten([styles.warningCard, { backgroundColor: '#FFF3E0' }])}>
+              <View style={styles.warningHeader}>
+                <Ionicons name="warning" size={20} color="#F57C00" />
+                <Text style={[styles.warningTitle, { color: '#F57C00' }]}> 
+                  有害成分提醒
+                </Text>
+              </View>
+              <Text style={[styles.warningText, { color: '#E65100' }]}> 
+                {food.harmful_ingredients_json.join('、')}
+              </Text>
+            </Card>
+          )}
 
           {/* 时间信息 */}
           <Card style={styles.timeCard}>
-            <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
+            <Text style={[styles.sectionTitle, { color: theme.colors.text }]}> 
               时间信息
             </Text>
             <View style={styles.timeInfo}>
               <View style={styles.timeItem}>
-                <Text style={[styles.timeLabel, { color: theme.colors.textSecondary }]}>
+                <Text style={[styles.timeLabel, { color: theme.colors.textSecondary }]}> 
                   添加时间
                 </Text>
-                <Text style={[styles.timeValue, { color: theme.colors.text }]}>
+                <Text style={[styles.timeValue, { color: theme.colors.text }]}> 
                   {formatDate(food.created_at)}
                 </Text>
               </View>
               <View style={styles.timeItem}>
-                <Text style={[styles.timeLabel, { color: theme.colors.textSecondary }]}>
+                <Text style={[styles.timeLabel, { color: theme.colors.textSecondary }]}> 
                   剩余时间
                 </Text>
-                <Text style={[styles.timeValue, { color: statusInfo.text }]}>
+                <Text style={[styles.timeValue, { color: statusInfo.text }]}> 
                   {formatRelativeDate(food.expiry_date)}
                 </Text>
               </View>

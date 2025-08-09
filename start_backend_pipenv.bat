@@ -37,10 +37,10 @@ pipenv run flask db upgrade
 
 echo.
 echo 启动Flask开发服务器...
-echo 后端服务地址: http://localhost:5000
+echo 后端服务地址: http://localhost:5001
 echo 按 Ctrl+C 停止服务
 echo.
 
-pipenv run flask run --host=0.0.0.0 --port=5000
+pipenv run flask run --host=0.0.0.0 --port=5001
 
 pause

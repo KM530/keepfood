@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
@@ -9,6 +9,7 @@ interface MultiImagePickerProps {
   onImagesSelected?: (images: string[]) => void;
   maxImages?: number;
   label?: string;
+  readonly?: boolean; // 新增：是否为只读模式（用于显示现有图片）
 }
 
 export function MultiImagePicker({
@@ -16,9 +17,15 @@ export function MultiImagePicker({
   onImagesSelected,
   maxImages = 5,
   label = '食物图片',
+  readonly = false,
 }: MultiImagePickerProps) {
   const { theme } = useTheme();
   const [images, setImages] = useState<string[]>(value);
+
+  // 当value prop变化时更新本地状态
+  useEffect(() => {
+    setImages(value);
+  }, [value]);
 
   const handleAddImage = async () => {
     if (images.length >= maxImages) {
@@ -130,17 +137,19 @@ export function MultiImagePicker({
         {images.map((uri, index) => (
           <View key={index} style={styles.imageWrapper}>
             <Image source={{ uri }} style={styles.image} />
-            <TouchableOpacity
-              style={[styles.removeButton, { backgroundColor: theme.colors.error }]}
-              onPress={() => handleRemoveImage(index)}
-            >
-              <Ionicons name="close" size={16} color="white" />
-            </TouchableOpacity>
+            {!readonly && (
+              <TouchableOpacity
+                style={[styles.removeButton, { backgroundColor: theme.colors.error }]}
+                onPress={() => handleRemoveImage(index)}
+              >
+                <Ionicons name="close" size={16} color="white" />
+              </TouchableOpacity>
+            )}
           </View>
         ))}
         
         {/* 添加图片按钮 */}
-        {images.length < maxImages && (
+        {!readonly && images.length < maxImages && (
           <TouchableOpacity
             style={[
               styles.addButton,

@@ -52,7 +52,7 @@ npm run-script build
 npm start  # run the webpack dev server and flask server using concurrently
 ```
 
-Go to `http://localhost:5000`. You will see a pretty welcome screen.
+Go to `http://localhost:5001`. You will see a pretty welcome screen.
 
 #### Database Initialization (locally)
 

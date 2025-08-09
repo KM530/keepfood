@@ -121,7 +121,7 @@ export function formatImageUrl(url: string | null | undefined, size?: 'sm' | 'md
   }
   
   // 如果是相对路径，添加基础URL
-  const baseUrl = __DEV__ ? 'http://localhost:5000' : 'https://api.foodmanager.com';
+  const baseUrl = __DEV__ ? 'http://localhost:5001' : 'https://api.foodmanager.com';
   let fullUrl = `${baseUrl}${url.startsWith('/') ? '' : '/'}${url}`;
   
   // 根据尺寸添加参数
@@ -134,7 +134,7 @@ export function formatImageUrl(url: string | null | undefined, size?: 'sm' | 'md
 }
 
 export function formatApiUrl(endpoint: string): string {
-  const baseUrl = __DEV__ ? 'http://localhost:5000/api' : 'https://api.foodmanager.com/api';
+  const baseUrl = __DEV__ ? 'http://localhost:5001/api' : 'https://api.foodmanager.com/api';
   return `${baseUrl}${endpoint.startsWith('/') ? '' : '/'}${endpoint}`;
 }
 
