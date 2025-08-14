@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "food",
-    "slug": "food",
+    "slug": "kevin",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -61,9 +61,9 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "8dde905b-05df-4dbb-9273-c1e763d4ed94"
+        "projectId": "b250e61c-813f-47f2-9da1-07e7f5dd6e7e"
       }
     },
-    "owner": "km530"
+    "owner": "songpy"
   }
 }

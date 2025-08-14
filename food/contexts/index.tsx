@@ -5,25 +5,40 @@ import { AuthProvider } from './AuthContext';
 import { AppProvider } from './AppContext';
 import { ThemeProvider } from './ThemeContext';
 import { LanguageProvider } from './LanguageContext';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { ErrorProvider, useErrorHandler } from './ErrorContext';
 
 // ============= 组合所有Provider =============
 
 interface ProvidersProps {
-  children: ReactNode;
+	children: ReactNode;
+}
+
+function BoundaryWrapper({ children }: { children: ReactNode }) {
+	const { addError } = useErrorHandler();
+	return (
+		<ErrorBoundary onError={(error, stack) => addError(error, stack)}>
+			{children}
+		</ErrorBoundary>
+	);
 }
 
 export function Providers({ children }: ProvidersProps) {
-  return (
-    <ThemeProvider>
-      <LanguageProvider>
-        <AuthProvider>
-          <AppProvider>
-            {children}
-          </AppProvider>
-        </AuthProvider>
-      </LanguageProvider>
-    </ThemeProvider>
-  );
+	return (
+		<ErrorProvider>
+			<BoundaryWrapper>
+				<ThemeProvider>
+					<LanguageProvider>
+						<AuthProvider>
+							<AppProvider>
+								{children}
+							</AppProvider>
+						</AuthProvider>
+					</LanguageProvider>
+				</ThemeProvider>
+			</BoundaryWrapper>
+		</ErrorProvider>
+	);
 }
 
 // ============= 导出所有上下文和Hook =============
