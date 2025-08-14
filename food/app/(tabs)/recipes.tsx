@@ -1,7 +1,8 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, FlatList, Image, Alert, Linking } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image, Alert, Linking, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '@/contexts/ThemeContext';
 import { Layout } from '@/components/ui/Layout';
 import { Card } from '@/components/ui/Card';
@@ -9,9 +10,10 @@ import { Button } from '@/components/ui/Button';
 import { Loading } from '@/components/ui/Loading';
 import { useFoodList } from '@/hooks/useFoodList';
 import { formatRelativeDate, getFoodStatus } from '@/utils/date';
-import type { FoodListItem } from '@/types';
+import type { FoodListItem, Recipe as APIRecipe } from '@/types';
 
-interface Recipe {
+// 本地Recipe类型，用于UI显示
+interface LocalRecipe {
   name: string;
   ingredients: string[];
   video_url: string;
@@ -21,10 +23,18 @@ interface Recipe {
 
 export default function RecipesScreen() {
   const { theme } = useTheme();
-  const { foods, loading } = useFoodList();
+  const { foods, loading, refresh, refreshing } = useFoodList();
   const [selectedFoods, setSelectedFoods] = useState<Set<number>>(new Set());
-  const [recipes, setRecipes] = useState<Recipe[]>([]);
+  const [recipes, setRecipes] = useState<LocalRecipe[]>([]);
   const [generatingRecipes, setGeneratingRecipes] = useState(false);
+
+  // 当页面获得焦点时自动刷新数据
+  useFocusEffect(
+    useCallback(() => {
+      console.log('🔄 菜谱页面获得焦点，自动刷新数据');
+      refresh();
+    }, [refresh])
+  );
 
   // 获取即将过期的食物
   const expiringFoods = foods.filter(food => {
@@ -78,29 +88,36 @@ export default function RecipesScreen() {
     try {
       const { apiClient } = await import('@/lib/api');
       
-      // 获取选中食物的名称
-      const selectedFoodNames = foods
-        .filter(food => selectedFoods.has(food.id))
-        .map(food => food.name);
+      // 获取选中食物的ID
+      const selectedFoodIds = Array.from(selectedFoods);
       
-      console.log('🍳 准备生成菜谱，食材:', selectedFoodNames);
+      console.log('🍳 准备生成菜谱，食材ID:', selectedFoodIds);
       
-      const recipes = await apiClient.generateRecipes({
-        food_names: selectedFoodNames
+      const apiRecipes = await apiClient.generateRecipes({
+        foodIds: selectedFoodIds
       });
 
-      setRecipes(recipes);
+      // 将API返回的Recipe转换为本地Recipe格式
+      const localRecipes: LocalRecipe[] = apiRecipes.map((apiRecipe, index) => ({
+        name: apiRecipe.recipeName || `菜谱 ${index + 1}`,
+        ingredients: [...(apiRecipe.usedIngredients || []), ...(apiRecipe.otherIngredients || [])],
+        video_url: apiRecipe.videoUrl || 'https://www.bilibili.com/video/BV1ttKxzQEBD',
+        matched_ingredients: apiRecipe.usedIngredients || [],
+        missing_ingredients: apiRecipe.otherIngredients || []
+      }));
+
+      setRecipes(localRecipes);
       
       Alert.alert(
         '生成完成',
-        `为您生成了 ${recipes.length} 道菜谱`
+        `为您生成了 ${localRecipes.length} 道菜谱`
       );
     } catch (error) {
       console.error('Failed to generate recipes:', error);
       
       // 如果API调用失败，回退到模拟数据
       const selectedFoodList = foods.filter(food => selectedFoods.has(food.id));
-      const mockRecipes: Recipe[] = selectedFoodList.slice(0, 2).map((food, index) => ({
+      const mockRecipes: LocalRecipe[] = selectedFoodList.slice(0, 2).map((food, index) => ({
         name: `${food.name}特色料理`,
         ingredients: [food.name, '盐', '油', '生抽'],
         video_url: 'https://www.bilibili.com/video/BV1ttKxzQEBD',
@@ -172,7 +189,7 @@ export default function RecipesScreen() {
   };
 
   // 渲染菜谱项
-  const renderRecipeItem = ({ item }: { item: Recipe }) => (
+  const renderRecipeItem = ({ item }: { item: LocalRecipe }) => (
     <Card style={styles.recipeCard}>
       <View style={styles.recipeHeader}>
         <Text style={[styles.recipeTitle, { color: theme.colors.text }]}>
@@ -244,7 +261,99 @@ export default function RecipesScreen() {
     </Card>
   );
 
-  if (loading) {
+  // 渲染列表头部
+  const renderListHeader = () => (
+    <View>
+      {/* 即将过期食物提示 */}
+      <Card style={styles.alertCard}>
+        <View style={styles.alertHeader}>
+          <Ionicons name="warning" size={24} color="#FF9800" />
+          <Text style={[styles.alertTitle, { color: theme.colors.text }]}>
+            即将过期的食物
+          </Text>
+        </View>
+        <Text style={[styles.alertDescription, { color: theme.colors.textSecondary }]}>
+          您有 {expiringFoods.length} 个食物即将过期，选择它们来生成美味菜谱吧！
+        </Text>
+      </Card>
+
+      {/* 食物选择区域 */}
+      {expiringFoods.length > 0 ? (
+        <Card style={styles.foodSection}>
+          <View style={styles.foodSectionHeader}>
+            <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
+              选择食物 ({selectedFoods.size}/{expiringFoods.length})
+            </Text>
+            <TouchableOpacity onPress={toggleSelectAll}>
+              <Text style={[styles.selectAllText, { color: theme.colors.primary }]}>
+                {selectedFoods.size === expiringFoods.length ? '取消全选' : '全选'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          <FlatList
+            data={expiringFoods}
+            renderItem={renderFoodItem}
+            keyExtractor={(item) => item.id.toString()}
+            numColumns={2}
+            columnWrapperStyle={styles.foodRow}
+            scrollEnabled={false}
+          />
+
+          <Button
+            title={generatingRecipes ? '正在生成菜谱...' : '生成菜谱推荐'}
+            onPress={handleGenerateRecipes}
+            disabled={selectedFoods.size === 0 || generatingRecipes}
+            loading={generatingRecipes}
+            style={styles.generateButton}
+          />
+        </Card>
+      ) : (
+        <Card style={styles.emptyCard}>
+          <Ionicons name="checkmark-circle" size={64} color="#4CAF50" />
+          <Text style={[styles.emptyTitle, { color: theme.colors.text }]}>
+            没有即将过期的食物
+          </Text>
+          <Text style={[styles.emptyDescription, { color: theme.colors.textSecondary }]}>
+            您的食物管理得很好！所有食物都还很新鲜。
+          </Text>
+        </Card>
+      )}
+
+      {/* 菜谱推荐结果 */}
+      {recipes.length > 0 && (
+        <View style={styles.recipesSection}>
+          <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
+            推荐菜谱 ({recipes.length})
+          </Text>
+          {recipes.map((recipe, index) => (
+            <View key={index}>
+              {renderRecipeItem({ item: recipe })}
+            </View>
+          ))}
+        </View>
+      )}
+    </View>
+  );
+
+  // 渲染空状态
+  const renderEmptyState = () => (
+    <View style={styles.emptyState}>
+      <Ionicons
+        name="restaurant-outline"
+        size={64}
+        color={theme.colors.textSecondary}
+      />
+      {/* <Text style={[styles.emptyTitle, { color: theme.colors.text }]}>
+        暂无即将过期的食物
+      </Text>
+      <Text style={[styles.emptyDescription, { color: theme.colors.textSecondary }]}>
+        您的食物管理得很好！所有食物都还很新鲜。
+      </Text> */}
+    </View>
+  );
+
+  if (loading && foods.length === 0) {
     return (
       <Layout>
         <Loading />
@@ -262,77 +371,25 @@ export default function RecipesScreen() {
           </Text>
         </View>
 
-        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-          {/* 即将过期食物提示 */}
-          <Card style={styles.alertCard}>
-            <View style={styles.alertHeader}>
-              <Ionicons name="warning" size={24} color="#FF9800" />
-              <Text style={[styles.alertTitle, { color: theme.colors.text }]}>
-                即将过期的食物
-              </Text>
-            </View>
-            <Text style={[styles.alertDescription, { color: theme.colors.textSecondary }]}>
-              您有 {expiringFoods.length} 个食物即将过期，选择它们来生成美味菜谱吧！
-            </Text>
-          </Card>
-
-          {/* 食物选择区域 */}
-          {expiringFoods.length > 0 ? (
-            <Card style={styles.foodSection}>
-              <View style={styles.foodSectionHeader}>
-                <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
-                  选择食物 ({selectedFoods.size}/{expiringFoods.length})
-                </Text>
-                <TouchableOpacity onPress={toggleSelectAll}>
-                  <Text style={[styles.selectAllText, { color: theme.colors.primary }]}>
-                    {selectedFoods.size === expiringFoods.length ? '取消全选' : '全选'}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-
-              <FlatList
-                data={expiringFoods}
-                renderItem={renderFoodItem}
-                keyExtractor={(item) => item.id.toString()}
-                numColumns={2}
-                columnWrapperStyle={styles.foodRow}
-                scrollEnabled={false}
-              />
-
-              <Button
-                title={generatingRecipes ? '正在生成菜谱...' : '生成菜谱推荐'}
-                onPress={handleGenerateRecipes}
-                disabled={selectedFoods.size === 0 || generatingRecipes}
-                loading={generatingRecipes}
-                style={styles.generateButton}
-              />
-            </Card>
-          ) : (
-            <Card style={styles.emptyCard}>
-              <Ionicons name="checkmark-circle" size={64} color="#4CAF50" />
-              <Text style={[styles.emptyTitle, { color: theme.colors.text }]}>
-                没有即将过期的食物
-              </Text>
-              <Text style={[styles.emptyDescription, { color: theme.colors.textSecondary }]}>
-                您的食物管理得很好！所有食物都还很新鲜。
-              </Text>
-            </Card>
-          )}
-
-          {/* 菜谱推荐结果 */}
-          {recipes.length > 0 && (
-            <View style={styles.recipesSection}>
-              <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
-                推荐菜谱 ({recipes.length})
-              </Text>
-              {recipes.map((recipe, index) => (
-                <View key={index}>
-                  {renderRecipeItem({ item: recipe })}
-                </View>
-              ))}
-            </View>
-          )}
-        </ScrollView>
+        <FlatList
+          data={[]}
+          renderItem={() => null}
+          ListHeaderComponent={renderListHeader}
+          ListEmptyComponent={renderEmptyState}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={refresh}
+              colors={[theme.colors.primary]}
+              tintColor={theme.colors.primary}
+            />
+          }
+          contentContainerStyle={[
+            styles.listContent,
+            foods.length === 0 && styles.emptyListContent
+          ]}
+          showsVerticalScrollIndicator={false}
+        />
       </SafeAreaView>
     </Layout>
   );
@@ -353,9 +410,28 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     textAlign: 'center',
   },
-  content: {
-    flex: 1,
+  listContent: {
     padding: 16,
+    paddingBottom: 20,
+  },
+  emptyListContent: {
+    flexGrow: 1,
+  },
+  emptyState: {
+    alignItems: 'center',
+    padding: 32,
+    marginTop: 100,
+  },
+  emptyTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  emptyDescription: {
+    fontSize: 16,
+    textAlign: 'center',
+    lineHeight: 24,
   },
   alertCard: {
     marginBottom: 16,
@@ -441,17 +517,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 32,
     marginBottom: 16,
-  },
-  emptyTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    marginTop: 16,
-    marginBottom: 8,
-  },
-  emptyDescription: {
-    fontSize: 16,
-    textAlign: 'center',
-    lineHeight: 24,
   },
   recipesSection: {
     marginTop: 8,

@@ -19,7 +19,9 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "usesCleartextTraffic": true
+      "permissions": [
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "web": {
       "bundler": "metro",
@@ -50,10 +52,18 @@
           "photosPermission": "The app accesses your photos to let you add food images.",
           "cameraPermission": "The app accesses your camera to let you take photos of food."
         }
-      ]
+      ],
+      "expo-build-properties"
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "8dde905b-05df-4dbb-9273-c1e763d4ed94"
+      }
+    },
+    "owner": "km530"
   }
 }

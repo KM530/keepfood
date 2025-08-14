@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, FlatList, RefreshControl, TouchableOpacity, Ale
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '@/contexts/ThemeContext';
 import { Layout } from '@/components/ui/Layout';
 import { SearchBar } from '@/components/ui/SearchBar';
@@ -41,6 +42,14 @@ export default function HomeScreen() {
 
   const { categories } = useCategories();
   const { locations } = useLocations();
+
+  // 当页面获得焦点时自动刷新数据
+  useFocusEffect(
+    useCallback(() => {
+      console.log('🔄 首页获得焦点，自动刷新数据');
+      refresh();
+    }, [refresh])
+  );
 
   // 搜索处理
   const handleSearchSubmit = useCallback((text: string) => {

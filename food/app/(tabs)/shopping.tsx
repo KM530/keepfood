@@ -2,6 +2,7 @@ import React, { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, FlatList, RefreshControl, TouchableOpacity, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '@/contexts/ThemeContext';
 import { Layout } from '@/components/ui/Layout';
 import { Loading } from '@/components/ui/Loading';
@@ -30,6 +31,14 @@ export default function ShoppingScreen() {
   const [batchMode, setBatchMode] = useState(false);
   const [selectedItems, setSelectedItems] = useState<Set<number>>(new Set());
   const [showAddModal, setShowAddModal] = useState(false);
+
+  // 当页面获得焦点时自动刷新数据
+  useFocusEffect(
+    useCallback(() => {
+      console.log('🔄 购物页面获得焦点，自动刷新数据');
+      refresh();
+    }, [refresh])
+  );
 
   // 处理添加新项目
   const handleAddItem = () => {
