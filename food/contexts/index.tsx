@@ -24,6 +24,8 @@ function BoundaryWrapper({ children }: { children: ReactNode }) {
 }
 
 export function Providers({ children }: ProvidersProps) {
+	console.log('🔧 Providers initializing');
+	
 	return (
 		<ErrorProvider>
 			<ErrorBoundary onError={(error, stack) => {

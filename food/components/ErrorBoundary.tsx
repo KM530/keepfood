@@ -71,15 +71,12 @@ export class ErrorBoundary extends React.Component<Props, State> {
 	};
 
 	private handleRestart = () => {
-		if (typeof window !== 'undefined') {
-			window.location.reload();
-		} else {
-			this.setState({
-				hasError: false,
-				error: null,
-				errorInfo: null,
-			});
-		}
+		// React Native环境，重置错误状态
+		this.setState({
+			hasError: false,
+			error: null,
+			errorInfo: null,
+		});
 	};
 
 	render() {

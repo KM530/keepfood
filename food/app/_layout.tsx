@@ -39,6 +39,11 @@ export default function RootLayout() {
 		SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
 	});
 
+	// 添加调试日志
+	console.log('🚀 RootLayout rendered');
+	console.log('🚀 Fonts loaded:', fontsLoaded);
+	console.log('🚀 Font error:', fontError);
+
 	// 字体加载状态处理
 	if (fontError) {
 		console.warn('字体加载失败:', fontError);
@@ -47,17 +52,31 @@ export default function RootLayout() {
 
 	// 显示启动屏幕直到字体加载完成
 	if (!fontsLoaded && !fontError) {
+		console.log('🚀 Showing splash screen, fonts not loaded');
 		return <SplashScreen />;
 	}
 
+	console.log('🚀 Rendering main app');
 	return (
 		<Providers>
 			<ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
 				<GlobalErrorHandlerInit />
 				<Stack>
+					<Stack.Screen name="index" options={{ headerShown: false }} />
 					<Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-					<Stack.Screen name="login" options={{ headerShown: false }} />
-					<Stack.Screen name="register" options={{ headerShown: false }} />
+					<Stack.Screen name="login" options={{ 
+						headerShown: false,
+						presentation: 'modal'
+					}} />
+					<Stack.Screen name="login-simple" options={{ 
+						headerShown: false,
+						presentation: 'modal'
+					}} />
+					<Stack.Screen name="register" options={{ 
+						headerShown: false,
+						presentation: 'modal'
+					}} />
+					<Stack.Screen name="test" options={{ headerShown: false }} />
 					<Stack.Screen name="+not-found" />
 					<Stack.Screen 
 						name="food/[id]" 

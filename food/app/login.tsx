@@ -26,6 +26,10 @@ interface LoginForm {
 export default function LoginScreen() {
   const { login, loading, error, clearError } = useAuth();
   
+  // 添加调试日志
+  console.log('🔐 LoginScreen rendered');
+  console.log('🔐 Auth state:', { loading, error });
+  
   const [form, setForm] = useState<LoginForm>({
     account: { value: '', error: '', touched: false },
     password: { value: '', error: '', touched: false },
@@ -140,6 +144,22 @@ export default function LoginScreen() {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
+      {/* 添加调试信息 */}
+      {__DEV__ && (
+        <View style={{ 
+          position: 'absolute', 
+          top: 50, 
+          left: 10, 
+          backgroundColor: 'rgba(0,0,0,0.7)', 
+          padding: 5,
+          borderRadius: 5
+        }}>
+          <Text style={{ color: 'white', fontSize: 10 }}>
+            LoginScreen Rendered
+          </Text>
+        </View>
+      )}
+      
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
@@ -250,7 +270,9 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     justifyContent: 'center',
-    padding: SIZES.spacing.lg,
+    alignItems: 'center',
+    padding: SIZES.spacing.xl,
+    minHeight: '100%',
   },
   header: {
     alignItems: 'center',
@@ -270,6 +292,7 @@ const styles = StyleSheet.create({
   },
   form: {
     width: '100%',
+    maxWidth: 400,
   },
   inputGroup: {
     marginBottom: SIZES.spacing.lg,

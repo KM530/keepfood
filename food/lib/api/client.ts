@@ -374,16 +374,8 @@ class HTTPClientImpl implements HTTPClient {
   // 处理认证失效
   private handleAuthenticationFailure(): void {
     console.warn('[API] Authentication failed, clearing token and redirecting to login');
-    // 这里可以触发一个全局事件，通知应用需要重新登录
-    // 或者直接跳转到登录页面
-    if (typeof window !== 'undefined') {
-      // Web环境
-      window.dispatchEvent(new CustomEvent('auth:expired'));
-    } else {
-      // React Native环境，通过其他方式通知
-      // 这里可以设置一个标志，让应用知道需要重新登录
-      this.authExpired = true;
-    }
+    // React Native环境，通过设置标志来通知应用需要重新登录
+    this.authExpired = true;
   }
 
   private createNetworkError(originalError: Error): APIError {

@@ -169,15 +169,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
     // 清除认证状态
     dispatch({ type: 'AUTH_LOGOUT' });
     
-    // 跳转到登录页面
-    if (typeof window !== 'undefined') {
-      // Web环境
-      window.location.href = '/login';
-    } else {
-      // React Native环境，通过router跳转
-      // 这里需要导入router，但为了避免循环依赖，我们通过其他方式处理
-      console.log('Redirecting to login page...');
-    }
+    // React Native环境，通过设置错误状态来触发重定向
+    // useAuthGuard 会监听这个错误状态并重定向到登录页面
+    console.log('Authentication error occurred, will redirect to login via useAuthGuard');
   }, []);
 
   // 监听API客户端的认证失效事件

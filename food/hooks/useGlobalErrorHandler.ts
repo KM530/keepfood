@@ -6,7 +6,8 @@ export function useGlobalErrorHandler() {
 	const { addError } = useErrorHandler();
 
 	useEffect(() => {
-		if (Platform.OS === 'web') {
+		// 只在 Web 平台上使用 Web API
+		if (Platform.OS === 'web' && typeof window !== 'undefined') {
 			const handleError = (event: ErrorEvent) => {
 				addError(event.error || new Error(event.message), undefined, {
 					screen: window.location.pathname,
