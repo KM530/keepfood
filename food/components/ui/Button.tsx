@@ -49,7 +49,6 @@ export function Button({
       alignItems: 'center' as const,
       justifyContent: 'center' as const,
       borderRadius: theme.borderRadius.md,
-      paddingHorizontal: theme.spacing.md,
       gap: theme.spacing.sm,
       // 尺寸
       height: size === 'sm' ? 32 : size === 'lg' ? 48 : 40,

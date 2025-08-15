@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/Button';
 import { Loading } from '@/components/ui/Loading';
 import { useFoodList } from '@/hooks/useFoodList';
 import { formatRelativeDate, getFoodStatus } from '@/utils/date';
-import type { FoodListItem, Recipe as APIRecipe } from '@/types';
+import type { FoodListItem } from '@/types';
 
 // 本地Recipe类型，用于UI显示
 interface LocalRecipe {
@@ -88,45 +88,91 @@ export default function RecipesScreen() {
     try {
       const { apiClient } = await import('@/lib/api');
       
-      // 获取选中食物的ID
-      const selectedFoodIds = Array.from(selectedFoods);
+      // 获取选中食物的名称（而不是ID）
+      const selectedFoodList = foods.filter(food => selectedFoods.has(food.id));
+      const foodNames = selectedFoodList.map(food => food.name);
       
-      console.log('🍳 准备生成菜谱，食材ID:', selectedFoodIds);
+      console.log('🍳 准备生成菜谱，食材名称:', foodNames);
+      
+      // 显示详细的加载提示
+      Alert.alert(
+        '正在生成菜谱',
+        'AI正在分析您的食材并生成菜谱推荐，这可能需要几分钟时间，请耐心等待...',
+        [{ text: '知道了', style: 'default' }],
+        { cancelable: false }
+      );
       
       const apiRecipes = await apiClient.generateRecipes({
-        foodIds: selectedFoodIds
+        food_names: foodNames  // 使用正确的字段名，匹配后端API
       });
+
+      console.log('🎉 后端返回的菜谱数据:', apiRecipes);
 
       // 将API返回的Recipe转换为本地Recipe格式
       const localRecipes: LocalRecipe[] = apiRecipes.map((apiRecipe, index) => ({
-        name: apiRecipe.recipeName || `菜谱 ${index + 1}`,
-        ingredients: [...(apiRecipe.usedIngredients || []), ...(apiRecipe.otherIngredients || [])],
-        video_url: apiRecipe.videoUrl || 'https://www.bilibili.com/video/BV1ttKxzQEBD',
-        matched_ingredients: apiRecipe.usedIngredients || [],
-        missing_ingredients: apiRecipe.otherIngredients || []
+        name: apiRecipe.name || `菜谱 ${index + 1}`,
+        ingredients: apiRecipe.ingredients || [],
+        video_url: apiRecipe.video_url || 'https://www.bilibili.com/video/BV1ttKxzQEBD',
+        matched_ingredients: apiRecipe.matched_ingredients || [],
+        missing_ingredients: apiRecipe.missing_ingredients || []
       }));
 
       setRecipes(localRecipes);
       
       Alert.alert(
         '生成完成',
-        `为您生成了 ${localRecipes.length} 道菜谱`
+        `为您生成了 ${localRecipes.length} 道菜谱`,
+        [{ text: '太好了！', style: 'default' }]
       );
     } catch (error) {
       console.error('Failed to generate recipes:', error);
+      
+      // 显示具体的错误信息
+      let errorMessage = '生成菜谱失败';
+      let errorDetails = '';
+      
+      if (error instanceof Error) {
+        errorMessage = error.message;
+        // 检查是否是超时错误
+        if (error.message.includes('timeout') || error.message.includes('504')) {
+          errorMessage = '生成菜谱超时';
+          errorDetails = 'AI处理需要较长时间，请稍后重试。如果问题持续存在，可能是网络或服务器问题。';
+        }
+      } else if (typeof error === 'string') {
+        errorMessage = error;
+      }
+      
+      // 显示错误对话框，提供重试选项
+      Alert.alert(
+        errorMessage,
+        errorDetails || '请检查网络连接后重试',
+        [
+          { text: '取消', style: 'cancel' },
+          { 
+            text: '重试', 
+            style: 'default',
+            onPress: () => {
+              // 延迟一下再重试，避免立即重试
+              setTimeout(() => {
+                handleGenerateRecipes();
+              }, 1000);
+            }
+          }
+        ]
+      );
       
       // 如果API调用失败，回退到模拟数据
       const selectedFoodList = foods.filter(food => selectedFoods.has(food.id));
       const mockRecipes: LocalRecipe[] = selectedFoodList.slice(0, 2).map((food, index) => ({
         name: `${food.name}特色料理`,
-        ingredients: [food.name, '盐', '油', '生抽'],
+        ingredients: [food.name, '盐', '油', '生抽', '葱花'],
         video_url: 'https://www.bilibili.com/video/BV1ttKxzQEBD',
         matched_ingredients: [food.name],
-        missing_ingredients: ['盐', '油', '生抽']
+        missing_ingredients: ['盐', '油', '生抽', '葱花']
       }));
       
       setRecipes(mockRecipes);
-      Alert.alert('生成完成', `为您生成了 ${mockRecipes.length} 道菜谱（使用备用方案）`);
+      Alert.alert('备用方案', `使用备用方案生成了 ${mockRecipes.length} 道菜谱`);
     } finally {
       setGeneratingRecipes(false);
     }
@@ -203,6 +249,7 @@ export default function RecipesScreen() {
         </TouchableOpacity>
       </View>
       
+      {/* 所需食材 */}
       <View style={styles.recipeIngredients}>
         <Text style={[styles.recipeSection, { color: theme.colors.text }]}>
           所需食材：
@@ -218,10 +265,11 @@ export default function RecipesScreen() {
         </View>
       </View>
 
+      {/* 匹配的食材 */}
       {item.matched_ingredients.length > 0 && (
         <View style={styles.matchedIngredients}>
           <Text style={[styles.recipeSection, { color: '#4CAF50' }]}>
-            ✅ 匹配的食材：
+            ✅ 您有的食材：
           </Text>
           <View style={styles.ingredientsList}>
             {item.matched_ingredients.map((ingredient, index) => (
@@ -235,10 +283,11 @@ export default function RecipesScreen() {
         </View>
       )}
 
+      {/* 缺少的食材 */}
       {item.missing_ingredients.length > 0 && (
         <View style={styles.missingIngredients}>
           <Text style={[styles.recipeSection, { color: '#FF9800' }]}>
-            ⚠️ 缺少的食材：
+            ⚠️ 需要购买的食材：
           </Text>
           <View style={styles.ingredientsList}>
             {item.missing_ingredients.map((ingredient, index) => (
@@ -249,6 +298,15 @@ export default function RecipesScreen() {
               </View>
             ))}
           </View>
+        </View>
+      )}
+
+      {/* 匹配度提示 */}
+      {item.missing_ingredients.length === 0 && item.matched_ingredients.length > 0 && (
+        <View style={styles.perfectMatch}>
+          <Text style={[styles.recipeSection, { color: '#4CAF50' }]}>
+            🎉 完美匹配！您有所有需要的食材
+          </Text>
         </View>
       )}
 
@@ -301,12 +359,22 @@ export default function RecipesScreen() {
           />
 
           <Button
-            title={generatingRecipes ? '正在生成菜谱...' : '生成菜谱推荐'}
+            title={
+              generatingRecipes 
+                ? 'AI正在生成菜谱...' 
+                : '生成菜谱推荐'
+            }
             onPress={handleGenerateRecipes}
             disabled={selectedFoods.size === 0 || generatingRecipes}
             loading={generatingRecipes}
             style={styles.generateButton}
           />
+          
+          {generatingRecipes && (
+            <Text style={[styles.loadingHint, { color: theme.colors.textSecondary }]}>
+              ⏳ AI正在分析您的食材，这可能需要几分钟时间...
+            </Text>
+          )}
         </Card>
       ) : (
         <Card style={styles.emptyCard}>
@@ -513,6 +581,11 @@ const styles = StyleSheet.create({
   generateButton: {
     marginTop: 16,
   },
+  loadingHint: {
+    marginTop: 12,
+    fontSize: 14,
+    textAlign: 'center',
+  },
   emptyCard: {
     alignItems: 'center',
     padding: 32,
@@ -552,6 +625,13 @@ const styles = StyleSheet.create({
   },
   missingIngredients: {
     marginBottom: 12,
+  },
+  perfectMatch: {
+    marginBottom: 12,
+    padding: 12,
+    backgroundColor: '#E8F5E8',
+    borderRadius: 8,
+    alignItems: 'center',
   },
   ingredientsList: {
     flexDirection: 'row',

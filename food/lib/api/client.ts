@@ -51,6 +51,7 @@ class HTTPClientImpl implements HTTPClient {
   private requestInterceptors: RequestInterceptor[] = [];
   private responseInterceptors: ResponseInterceptor[] = [];
   private baseOrigin: string; // 新增：用于静态资源
+  public authExpired: boolean = false; // 新增：认证失效标志
 
   constructor(config: APIClientConfig) {
     this.baseURL = config.baseURL;
@@ -347,6 +348,10 @@ class HTTPClientImpl implements HTTPClient {
     
     if (status === 401) {
       error.code = 'AUTHENTICATION_ERROR';
+      // 401错误时自动清除过期的token
+      this.clearToken();
+      // 触发认证失效事件
+      this.handleAuthenticationFailure();
     } else if (status === 403) {
       error.code = 'AUTHORIZATION_ERROR';
     } else if (status === 404) {
@@ -364,6 +369,21 @@ class HTTPClientImpl implements HTTPClient {
     (error as any).response = response;
     
     return error;
+  }
+
+  // 处理认证失效
+  private handleAuthenticationFailure(): void {
+    console.warn('[API] Authentication failed, clearing token and redirecting to login');
+    // 这里可以触发一个全局事件，通知应用需要重新登录
+    // 或者直接跳转到登录页面
+    if (typeof window !== 'undefined') {
+      // Web环境
+      window.dispatchEvent(new CustomEvent('auth:expired'));
+    } else {
+      // React Native环境，通过其他方式通知
+      // 这里可以设置一个标志，让应用知道需要重新登录
+      this.authExpired = true;
+    }
   }
 
   private createNetworkError(originalError: Error): APIError {
@@ -676,7 +696,13 @@ class APIClientImpl implements APIClient {
   }
 
   async generateRecipes(data: GenerateRecipesRequest): Promise<Recipe[]> {
-    const response = await this.http.post('/recipes/generate', data);
+    // 菜谱生成需要更长的超时时间（5分钟），因为AI处理需要时间
+    const response = await this.http.request({
+      method: 'POST',
+      url: '/recipes/generate',
+      data,
+      timeout: 300000 // 5分钟超时
+    });
     return response.body.recipes || [];
   }
 
@@ -695,8 +721,8 @@ class APIClientImpl implements APIClient {
 
 const API_CONFIG: APIClientConfig = {
   // baseURL: __DEV__ ? 'http://localhost:5001/api' : 'https://api.foodmanager.com/api',
-  baseURL: __DEV__ ? 'http://food.mentalnest.cn/api' : 'https://food.mentalnest.cn/api',
-  timeout: 120000, // 2分钟超时，适应AI分析的长时间处理
+  baseURL: __DEV__ ? 'https://food.mentalnest.cn/api' : 'https://food.mentalnest.cn/api',
+  timeout: 240000, // 2分钟超时，适应AI分析的长时间处理
   headers: {
     'Accept': 'application/json',
   },

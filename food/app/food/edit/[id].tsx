@@ -267,19 +267,31 @@ export default function EditFoodScreen() {
       const analysisResult = await apiClient.analyzeFoodImages(formDataToSend);
       console.log('🎉 AI分析响应:', analysisResult);
       
-      // 自动填充分析结果
-      console.log('📝 填充分析结果...');
-      setFormData(prev => ({
-        ...prev,
-        ingredientsText: analysisResult.ingredients_text || prev.ingredientsText,
-        harmfulIngredients: analysisResult.harmful_ingredients || prev.harmfulIngredients,
-        productionDate: analysisResult.production_date || prev.productionDate,
-        shelfLifeValue: analysisResult.shelf_life_value?.toString() || prev.shelfLifeValue,
-        shelfLifeUnit: analysisResult.shelf_life_unit || prev.shelfLifeUnit,
-        expiryDate: analysisResult.expiry_date || prev.expiryDate,
-        caloriesKcal: analysisResult.calories_kcal?.toString() || prev.caloriesKcal,
-        energyOffsetInfo: analysisResult.energy_offset_info || prev.energyOffsetInfo,
-      }));
+      // 处理AI分析结果
+      if (analysisResult) {
+        setFormData(prev => ({
+          ...prev,
+          name: analysisResult.ingredients.join(', ') || prev.name,
+          // 移除不存在的属性访问
+          // harmfulIngredients: analysisResult.potential_concerns?.items || [],
+        }));
+        
+        // 显示AI分析结果
+        Alert.alert(
+          'AI分析完成',
+          `识别到食材: ${analysisResult.ingredients.join(', ')}\n` +
+          `潜在问题: ${analysisResult.potential_concerns?.note || '无'}`,
+          [
+            { text: '取消', style: 'cancel' },
+            { text: '应用结果', onPress: () => {
+              setFormData(prev => ({
+                ...prev,
+                name: analysisResult.ingredients.join(', ') || prev.name,
+              }));
+            }}
+          ]
+        );
+      }
 
       console.log('✅ AI分析完成并填充数据');
       Alert.alert('AI分析完成', '已自动填充识别到的信息，请检查并确认');
@@ -409,7 +421,7 @@ export default function EditFoodScreen() {
             <Text style={[styles.errorTitle, { color: theme.colors.error }]}>
               加载失败
             </Text>
-            <Text style={[styles.errorText, { color: theme.colors.textSecondary }]}>
+            <Text style={[styles.errorMessage, { color: theme.colors.textSecondary }]}>
               {error || '食物不存在'}
             </Text>
             <Button
@@ -784,7 +796,7 @@ const styles = StyleSheet.create({
     marginTop: 16,
     marginBottom: 8,
   },
-  errorText: {
+  errorMessage: {
     fontSize: 16,
     textAlign: 'center',
     marginBottom: 24,

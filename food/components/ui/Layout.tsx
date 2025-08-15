@@ -1,15 +1,10 @@
 // 通用页面布局组件
 
 import React from 'react';
-import {
-  View,
-  ScrollView,
-  SafeAreaView,
-  StyleSheet,
-  ViewStyle,
-  StatusBar,
-} from 'react-native';
-import { useTheme } from '@/contexts';
+import { View, ViewStyle, ScrollView, Text } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
+import { useTheme } from '@/contexts/ThemeContext';
 
 interface LayoutProps {
   children: React.ReactNode;

@@ -215,17 +215,18 @@ export interface AIFoodAnalysisResponse {
 }
 
 export interface Recipe {
-  recipeName: string;
-  videoUrl?: string;
-  usedIngredients: string[];
-  otherIngredients: string[];
+  name: string;
+  ingredients: string[];
+  video_url: string;
+  matched_ingredients: string[];
+  missing_ingredients: string[];
   cookingTime?: number;
   difficulty?: string;
   instructions?: string[];
 }
 
 export interface GenerateRecipesRequest {
-  foodIds: number[];
+  food_names: string[];
 }
 
 // ============= 推送通知相关类型 =============

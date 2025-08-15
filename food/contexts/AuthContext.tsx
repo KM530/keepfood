@@ -1,6 +1,6 @@
 // 认证上下文
 
-import React, { createContext, useContext, useReducer, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useReducer, useEffect, ReactNode, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { apiClient } from '@/lib/api';
 import type { User, AuthState, LoginRequest, RegisterRequest, ChangePasswordRequest } from '@/types';
@@ -117,37 +117,89 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   // 从存储恢复认证状态
   useEffect(() => {
-    const restoreAuthState = async () => {
+    const restoreAuth = async () => {
       try {
-        const token = await AsyncStorage.getItem('auth_token');
-        const userStr = await AsyncStorage.getItem('auth_user');
+        const [token, userData] = await Promise.all([
+          AsyncStorage.getItem('auth_token'),
+          AsyncStorage.getItem('auth_user')
+        ]);
 
-        if (token && userStr) {
-          const user = JSON.parse(userStr);
-          
-          // 验证token是否仍然有效
+        if (token && userData) {
           try {
-            const currentUser = await apiClient.getCurrentUser();
-            dispatch({
-              type: 'AUTH_RESTORE',
-              payload: { user: currentUser, token },
-            });
-          } catch (error) {
-            // Token无效，清除存储
-            await AsyncStorage.multiRemove(['auth_token', 'auth_user']);
-            dispatch({ type: 'AUTH_LOGOUT' });
+            const user = JSON.parse(userData);
+            // 验证token是否有效
+            try {
+              const currentUser = await apiClient.getCurrentUser();
+              dispatch({ type: 'AUTH_RESTORE', payload: { user: currentUser, token } });
+            } catch (apiError) {
+              console.warn('Token validation failed:', apiError);
+              // Token无效，清除存储并设置为未认证状态
+              await Promise.all([
+                AsyncStorage.removeItem('auth_token'),
+                AsyncStorage.removeItem('auth_user')
+              ]);
+              dispatch({ type: 'AUTH_FAILURE', payload: '令牌已过期，请重新登录' });
+            }
+          } catch (parseError) {
+            console.warn('Failed to parse user data:', parseError);
+            // 数据损坏时清除存储
+            await Promise.all([
+              AsyncStorage.removeItem('auth_token'),
+              AsyncStorage.removeItem('auth_user')
+            ]);
+            dispatch({ type: 'AUTH_FAILURE', payload: '认证数据损坏' });
           }
         } else {
-          dispatch({ type: 'AUTH_LOGOUT' });
+          dispatch({ type: 'AUTH_FAILURE', payload: '未找到认证信息' });
         }
       } catch (error) {
-        console.error('Failed to restore auth state:', error);
-        dispatch({ type: 'AUTH_LOGOUT' });
+        console.warn('Failed to restore auth from storage:', error);
+        // 存储访问失败时设置为未认证状态
+        dispatch({ type: 'AUTH_FAILURE', payload: '无法访问存储' });
       }
     };
 
-    restoreAuthState();
+    restoreAuth();
   }, []);
+
+  // 处理认证错误
+  const handleAuthError = useCallback((error: string) => {
+    console.warn('Authentication error:', error);
+    
+    // 清除认证状态
+    dispatch({ type: 'AUTH_LOGOUT' });
+    
+    // 跳转到登录页面
+    if (typeof window !== 'undefined') {
+      // Web环境
+      window.location.href = '/login';
+    } else {
+      // React Native环境，通过router跳转
+      // 这里需要导入router，但为了避免循环依赖，我们通过其他方式处理
+      console.log('Redirecting to login page...');
+    }
+  }, []);
+
+  // 监听API客户端的认证失效事件
+  useEffect(() => {
+    const checkAuthStatus = async () => {
+      try {
+        // 检查API客户端是否标记为认证失效
+        if (apiClient.http.authExpired) {
+          console.warn('API client marked as auth expired, logging out...');
+          handleAuthError('令牌已过期，请重新登录');
+          // 重置标志
+          apiClient.http.authExpired = false;
+        }
+      } catch (error) {
+        console.warn('Failed to check auth status:', error);
+      }
+    };
+
+    // 定期检查认证状态
+    const interval = setInterval(checkAuthStatus, 1000);
+    return () => clearInterval(interval);
+  }, [handleAuthError]);
 
   // 登录
   const login = async (credentials: LoginRequest) => {

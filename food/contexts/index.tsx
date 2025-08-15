@@ -26,7 +26,9 @@ function BoundaryWrapper({ children }: { children: ReactNode }) {
 export function Providers({ children }: ProvidersProps) {
 	return (
 		<ErrorProvider>
-			<BoundaryWrapper>
+			<ErrorBoundary onError={(error, stack) => {
+				console.error('Root ErrorBoundary caught error:', error, stack);
+			}}>
 				<ThemeProvider>
 					<LanguageProvider>
 						<AuthProvider>
@@ -36,7 +38,7 @@ export function Providers({ children }: ProvidersProps) {
 						</AuthProvider>
 					</LanguageProvider>
 				</ThemeProvider>
-			</BoundaryWrapper>
+			</ErrorBoundary>
 		</ErrorProvider>
 	);
 }

@@ -1,12 +1,11 @@
-import React, { Component, ReactNode } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
-import { ThemedView } from './ThemedView';
-import { ThemedText } from './ThemedText';
+import React from 'react';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '@/constants/Colors';
 
 interface Props {
-	children: ReactNode;
-	fallback?: ReactNode;
+	children: React.ReactNode;
+	fallback?: React.ReactNode;
 	onError?: (error: Error, componentStack?: string) => void;
 }
 
@@ -16,7 +15,7 @@ interface State {
 	errorInfo: React.ErrorInfo | null;
 }
 
-export class ErrorBoundary extends Component<Props, State> {
+export class ErrorBoundary extends React.Component<Props, State> {
 	constructor(props: Props) {
 		super(props);
 		this.state = {
@@ -85,47 +84,44 @@ export class ErrorBoundary extends Component<Props, State> {
 
 	render() {
 		if (this.state.hasError) {
-			if (this.props.fallback) {
-				return this.props.fallback;
-			}
-
 			return (
-				<ThemedView style={styles.container}>
-					<ScrollView contentContainerStyle={styles.scrollContainer}>
-						<View style={styles.errorContainer}>
-							<Text style={styles.errorIcon}>🚨</Text>
-							<ThemedText style={styles.errorTitle}>
-								应用遇到问题
-							</ThemedText>
-							<ThemedText style={styles.errorMessage}>
-								很抱歉，应用遇到了一个错误。请尝试重新启动应用。
-							</ThemedText>
-							{__DEV__ && this.state.error && (
-								<View style={styles.devInfo}>
-									<ThemedText style={styles.devTitle}>开发模式信息:</ThemedText>
-									<Text style={styles.errorText}>
-										{this.state.error.toString()}
-									</Text>
-									{this.state.errorInfo && (
-										<Text style={styles.stackText}>
-											{this.state.errorInfo.componentStack}
-										</Text>
-									)}
-								</View>
-							)}
-							<View style={styles.buttonContainer}>
-								<TouchableOpacity style={styles.retryButton} onPress={this.handleRetry}>
-									<Text style={styles.buttonText}>重试</Text>
-								</TouchableOpacity>
-								<TouchableOpacity style={styles.restartButton} onPress={this.handleRestart}>
-									<Text style={styles.buttonText}>重启应用</Text>
-								</TouchableOpacity>
+				<View style={styles.errorContainer}>
+					<View style={styles.errorContent}>
+						<Ionicons name="warning" size={64} color="#FF6B6B" />
+						<Text style={styles.errorTitle}>应用遇到问题</Text>
+						<Text style={styles.errorMessage}>
+							{this.state.error?.message || '发生了未知错误'}
+						</Text>
+						
+						{__DEV__ && this.state.errorInfo && (
+							<View style={styles.errorDetails}>
+								<Text style={styles.errorDetailsTitle}>错误详情 (开发模式):</Text>
+								<Text style={styles.errorStack}>
+									{this.state.errorInfo.componentStack}
+								</Text>
 							</View>
+						)}
+						
+						<View style={styles.errorActions}>
+							<TouchableOpacity
+								style={[styles.errorButton, styles.retryButton]}
+								onPress={this.handleRetry}
+							>
+								<Text style={styles.retryButtonText}>重试</Text>
+							</TouchableOpacity>
+							
+							<TouchableOpacity
+								style={[styles.errorButton, styles.restartButton]}
+								onPress={this.handleRestart}
+							>
+								<Text style={styles.restartButtonText}>重启应用</Text>
+							</TouchableOpacity>
 						</View>
-					</ScrollView>
-				</ThemedView>
+					</View>
+				</View>
 			);
 		}
+
 		return this.props.children;
 	}
 }
@@ -142,9 +138,24 @@ const styles = StyleSheet.create({
 		padding: 20,
 	},
 	errorContainer: {
+		flex: 1,
+		justifyContent: 'center',
+		alignItems: 'center',
+		padding: 20,
+		backgroundColor: Colors.light.background,
+	},
+	errorContent: {
 		alignItems: 'center',
 		maxWidth: 400,
 		width: '100%',
+		padding: 20,
+		backgroundColor: 'white',
+		borderRadius: 10,
+		shadowColor: '#000',
+		shadowOffset: { width: 0, height: 2 },
+		shadowOpacity: 0.1,
+		shadowRadius: 4,
+		elevation: 3,
 	},
 	errorIcon: {
 		fontSize: 64,
@@ -155,12 +166,14 @@ const styles = StyleSheet.create({
 		fontWeight: 'bold',
 		marginBottom: 16,
 		textAlign: 'center',
+		color: '#333',
 	},
 	errorMessage: {
 		fontSize: 16,
 		textAlign: 'center',
 		marginBottom: 32,
 		lineHeight: 24,
+		color: '#666',
 	},
 	devInfo: {
 		width: '100%',
@@ -202,6 +215,48 @@ const styles = StyleSheet.create({
 		borderRadius: 8,
 	},
 	buttonText: {
+		color: 'white',
+		fontSize: 16,
+		fontWeight: '600',
+	},
+	errorDetails: {
+		width: '100%',
+		marginTop: 20,
+		padding: 10,
+		backgroundColor: '#f9f9f9',
+		borderRadius: 5,
+		borderWidth: 1,
+		borderColor: '#eee',
+	},
+	errorDetailsTitle: {
+		fontSize: 14,
+		fontWeight: 'bold',
+		marginBottom: 8,
+		color: '#555',
+	},
+	errorStack: {
+		fontSize: 12,
+		color: '#333',
+		fontFamily: 'monospace',
+	},
+	errorActions: {
+		flexDirection: 'row',
+		gap: 15,
+		marginTop: 20,
+	},
+	errorButton: {
+		flex: 1,
+		paddingVertical: 10,
+		paddingHorizontal: 15,
+		borderRadius: 8,
+		alignItems: 'center',
+	},
+	retryButtonText: {
+		color: 'white',
+		fontSize: 16,
+		fontWeight: '600',
+	},
+	restartButtonText: {
 		color: 'white',
 		fontSize: 16,
 		fontWeight: '600',

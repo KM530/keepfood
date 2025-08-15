@@ -39,6 +39,7 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
         }
       } catch (error) {
         console.warn('Failed to load theme from storage:', error);
+        // 存储访问失败时使用系统主题
         setThemeMode(systemColorScheme === 'dark' ? 'dark' : 'light');
       } finally {
         setIsLoading(false);
@@ -81,9 +82,20 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
     setTheme,
   };
 
-  // 在加载主题时显示空白，避免闪烁
+  // 在加载主题时显示默认主题，避免白屏
   if (isLoading) {
-    return null;
+    const defaultTheme = getTheme(systemColorScheme === 'dark' ? 'dark' : 'light');
+    return (
+      <ThemeContext.Provider value={{
+        theme: defaultTheme,
+        themeMode: systemColorScheme === 'dark' ? 'dark' : 'light',
+        isDark: systemColorScheme === 'dark',
+        toggleTheme: () => {},
+        setTheme: () => {},
+      }}>
+        {children}
+      </ThemeContext.Provider>
+    );
   }
 
   return (
